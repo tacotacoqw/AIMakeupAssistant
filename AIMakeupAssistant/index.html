@@ -1,0 +1,3983 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AI 美妆助手</title>
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            height: 100vh;
+            overflow: hidden;
+            background: #FEF3C7;
+            font-family: -apple-system, 'PingFang SC', sans-serif;
+            color: #1C1917;
+            margin: 0;
+            padding: 0;
+            position: relative;
+        }
+
+        body::after {
+            display: none;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            height: 100vh;
+            background: linear-gradient(180deg, #FFFBEB 0%, #FEF3C7 100%);
+            position: relative;
+        }
+
+        /* Header */
+        .header {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            padding-top: calc(12px + env(safe-area-inset-top, 20px));
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(254,215,170,0.5);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #F97316, #EA580C);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-text h1 {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .logo-text p {
+            font-size: 12px;
+            color: #78716C;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(34,197,94,0.1);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #16A34A;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #22C55E;
+            border-radius: 50%;
+            box-shadow: 0 0 0 3px rgba(34,197,94,0.2);
+        }
+
+        .location-btn {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 12px;
+            background: rgba(249,115,22,0.1);
+            border: none;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #EA580C;
+        }
+
+        .location-btn:active {
+            background: rgba(249,115,22,0.2);
+            transform: scale(0.96);
+        }
+
+        /* Video */
+        .video-section {
+            flex-shrink: 0;
+            padding: 12px 16px;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4/3;
+            border-radius: 20px;
+            overflow: hidden;
+            background: #1C1917;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.8);
+            font-size: 14px;
+            background: linear-gradient(135deg, #1C1917 0%, #292524 100%);
+        }
+
+        .video-placeholder svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            opacity: 0.6;
+        }
+
+        .video-placeholder p {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .video-placeholder small {
+            margin-top: 8px;
+            font-size: 13px;
+            opacity: 0.6;
+        }
+
+        .video-status {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            color: white;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .camera-switch-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(10px);
+            border: none;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 2;
+            transition: background 0.2s;
+        }
+        .camera-switch-btn:active {
+            background: rgba(0,0,0,0.8);
+        }
+        .camera-switch-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Chat */
+        .chat-section {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 0 16px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 12px 0;
+        }
+
+        .chat-messages::-webkit-scrollbar { display: none; }
+
+        .message {
+            margin-bottom: 10px;
+            animation: slideUp 0.2s ease;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .msg-ai {
+            background: white;
+            border: 1px solid #FED7AA;
+            border-radius: 16px;
+            border-bottom-left-radius: 4px;
+            padding: 12px 16px;
+            margin-right: 40px;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .msg-user {
+            background: linear-gradient(135deg, #F97316, #EA580C);
+            border-radius: 16px;
+            border-bottom-right-radius: 4px;
+            padding: 12px 16px;
+            margin-left: 40px;
+            font-size: 15px;
+            line-height: 1.5;
+            color: white;
+        }
+
+        .typing {
+            display: flex;
+            gap: 4px;
+            padding: 16px;
+        }
+
+        .typing span {
+            width: 8px;
+            height: 8px;
+            background: #F97316;
+            border-radius: 50%;
+            animation: bounce 1.2s infinite;
+        }
+
+        .typing span:nth-child(2) { animation-delay: 0.2s; }
+        .typing span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-6px); }
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            flex-shrink: 0;
+            display: flex;
+            gap: 8px;
+            padding: 8px 0;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .quick-actions::-webkit-scrollbar { display: none; }
+
+        .quick-btn {
+            flex-shrink: 0;
+            padding: 10px 16px;
+            background: white;
+            border: 1.5px solid #FED7AA;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #1C1917;
+            white-space: nowrap;
+        }
+
+        .quick-btn:active {
+            background: #FFFBEB;
+            border-color: #F97316;
+            transform: scale(0.96);
+        }
+
+        /* Controls */
+        .controls {
+            flex-shrink: 0;
+            background: #FEF3C7;
+            border-top: none;
+            padding: 8px 16px calc(env(safe-area-inset-bottom, 0px) + 8px) 16px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .text-input {
+            flex: 1;
+            height: 44px;
+            padding: 0 16px;
+            background: #F5F5F4;
+            border: none;
+            border-radius: 22px;
+            font-size: 16px;
+            color: #1C1917;
+            outline: none;
+        }
+
+        .text-input::placeholder { color: #A8A29E; }
+
+        .send-btn {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, #F97316, #EA580C);
+            border: none;
+            border-radius: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .send-btn:active { transform: scale(0.92); }
+
+        .action-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            height: 48px;
+            border-radius: 14px;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+        }
+
+        .action-btn:active { transform: scale(0.96); }
+
+        .action-btn.primary {
+            background: linear-gradient(135deg, #F97316, #EA580C);
+            color: white;
+            box-shadow: 0 4px 12px rgba(249,115,22,0.3);
+        }
+
+        .action-btn.secondary {
+            background: #FFFBEB;
+            border: 2px solid #FED7AA;
+            color: #1C1917;
+        }
+
+        /* Voice Waves */
+        .voice-waves {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            height: 24px;
+        }
+
+        .voice-waves span {
+            width: 3px;
+            height: 12px;
+            background: white;
+            border-radius: 2px;
+            animation: wave 1s ease-in-out infinite;
+        }
+
+        .voice-waves span:nth-child(1) { animation-delay: 0s; }
+        .voice-waves span:nth-child(2) { animation-delay: 0.1s; }
+        .voice-waves span:nth-child(3) { animation-delay: 0.2s; }
+        .voice-waves span:nth-child(4) { animation-delay: 0.3s; }
+        .voice-waves span:nth-child(5) { animation-delay: 0.4s; }
+
+        @keyframes wave {
+            0%, 100% { height: 8px; }
+            50% { height: 20px; }
+        }
+
+        .action-btn.listening {
+            background: linear-gradient(135deg, #EF4444, #DC2626) !important;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .action-btn.call-mode {
+            background: linear-gradient(135deg, #22C55E, #16A34A) !important;
+            box-shadow: 0 0 0 3px rgba(34,197,94,0.3);
+        }
+
+        .action-btn.call-mode.listening {
+            background: linear-gradient(135deg, #EF4444, #DC2626) !important;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        /* ===== 全屏通话界面（豆包风格）===== */
+        .call-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            background: #000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+            padding: env(safe-area-inset-top, 20px) 20px env(safe-area-inset-bottom, 20px);
+            overflow: hidden;
+        }
+        .call-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        /* 摄像头画面作为通话背景 */
+        .call-video-bg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 0;
+        }
+        /* 右上角摄像头切换按钮 */
+        .call-camera-switch {
+            position: absolute;
+            top: calc(env(safe-area-inset-top, 20px) + 10px);
+            right: 16px;
+            z-index: 10;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+        }
+        .call-camera-switch:active { background: rgba(255,255,255,0.4); }
+        .call-video-mask {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg,
+                rgba(0,0,0,0.5) 0%,
+                rgba(0,0,0,0.2) 30%,
+                rgba(0,0,0,0.2) 60%,
+                rgba(0,0,0,0.7) 100%);
+            z-index: 1;
+        }
+
+        /* 顶部区域 */
+        .call-top {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 16px;
+            z-index: 2;
+        }
+        .call-timer {
+            font-size: 14px;
+            color: rgba(255,255,255,0.7);
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+        }
+        .call-label {
+            font-size: 13px;
+            color: rgba(255,255,255,0.5);
+            text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+        }
+
+        /* 中间区域：头像 + 状态 */
+        .call-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            z-index: 2;
+        }
+
+        /* 头像容器（带呼吸光圈） */
+        .call-avatar-wrap {
+            position: relative;
+            width: 100px;
+            height: 100px;
+        }
+        .call-avatar-ring {
+            position: absolute;
+            inset: -6px;
+            border-radius: 50%;
+            border: 2px solid rgba(249,115,22,0.4);
+            animation: callBreath 3s ease-in-out infinite;
+        }
+        .call-avatar-ring2 {
+            position: absolute;
+            inset: -14px;
+            border-radius: 50%;
+            border: 1.5px solid rgba(249,115,22,0.2);
+            animation: callBreath 3s ease-in-out infinite 0.5s;
+        }
+        .call-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #F97316, #FB923C);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 42px;
+            box-shadow: 0 0 30px rgba(249,115,22,0.3);
+        }
+
+        @keyframes callBreath {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.08); opacity: 1; }
+        }
+
+        /* AI名字 */
+        .call-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+        }
+
+        /* 状态文字 */
+        .call-status {
+            font-size: 14px;
+            color: rgba(255,255,255,0.7);
+            min-height: 20px;
+            text-align: center;
+            max-width: 280px;
+            line-height: 1.4;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+        }
+
+        /* 语音波形条 */
+        .call-voice-bars {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            height: 36px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .call-voice-bars.active {
+            opacity: 1;
+        }
+        .call-voice-bars span {
+            width: 4px;
+            border-radius: 3px;
+            background: rgba(249,115,22,0.8);
+            transition: height 0.15s ease;
+        }
+        .call-voice-bars.listening span {
+            background: rgba(34,197,94,0.8);
+        }
+
+        /* 字幕区域 */
+        .call-subtitle-area {
+            position: absolute;
+            bottom: 160px;
+            left: 20px;
+            right: 20px;
+            z-index: 3;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+        .call-subtitle {
+            padding: 10px 18px;
+            border-radius: 16px;
+            font-size: 16px;
+            line-height: 1.6;
+            max-width: 92%;
+            text-align: center;
+            min-height: 24px;
+            word-break: break-word;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        .call-subtitle.ai {
+            background: rgba(249,115,22,0.2);
+            border: 1px solid rgba(249,115,22,0.3);
+            color: #fff;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .call-subtitle.user {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.95);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .call-subtitle-label {
+            font-size: 11px;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 2px;
+        }
+        .call-subtitle .cursor {
+            display: inline-block;
+            width: 2px;
+            height: 16px;
+            background: rgba(255,255,255,0.7);
+            margin-left: 2px;
+            vertical-align: middle;
+            animation: blink 0.8s step-end infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* 通话界面任务清单 */
+        .call-task-container {
+            position: absolute;
+            top: env(safe-area-inset-top, 20px);
+            right: 12px;
+            z-index: 4;
+            max-width: 200px;
+            max-height: 280px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .call-task-container:empty { display: none; }
+        .call-task-container .task-card {
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 14px;
+            padding: 10px 12px;
+            margin-top: 50px;
+        }
+        .call-task-container .task-card-header {
+            border-bottom-color: rgba(255,255,255,0.1);
+        }
+        .call-task-container .task-card-title {
+            color: rgba(255,255,255,0.9);
+            font-size: 13px;
+        }
+        .call-task-container .task-progress {
+            color: rgba(249,115,22,0.9);
+            font-size: 12px;
+        }
+        .call-task-container .task-progress-bar {
+            background: rgba(255,255,255,0.1);
+        }
+        .call-task-container .task-name {
+            color: rgba(255,255,255,0.85);
+            font-size: 12px;
+        }
+        .call-task-container .task-name.done {
+            color: rgba(255,255,255,0.4);
+        }
+        .call-task-container .task-desc {
+            color: rgba(255,255,255,0.4);
+            font-size: 10px;
+        }
+        .call-task-container .task-check {
+            border-color: rgba(255,255,255,0.3);
+        }
+        .call-task-container .task-check.done {
+            background: #22C55E;
+            border-color: #22C55E;
+        }
+        .call-task-container .task-check.active {
+            border-color: #F97316;
+        }
+        .call-task-container .task-done-btn {
+            font-size: 10px;
+            padding: 2px 10px;
+        }
+        .call-task-container .task-step-num {
+            color: rgba(255,255,255,0.5);
+        }
+        .call-task-container .task-step-num.done {
+            color: rgba(255,255,255,0.3);
+        }
+        .call-task-container .task-item {
+            padding: 4px 0;
+        }
+        .call-task-container .task-complete-banner {
+            color: rgba(255,255,255,0.9);
+            font-size: 12px;
+        }
+
+        /* 底部按钮区 */
+        .call-bottom {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 48px;
+            padding-bottom: 20px;
+            z-index: 2;
+        }
+        .call-action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .call-action-btn .btn-circle {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+        .call-action-btn:active .btn-circle {
+            transform: scale(0.92);
+        }
+        .call-action-btn .btn-label {
+            font-size: 12px;
+            color: rgba(255,255,255,0.6);
+        }
+
+        .call-hangup .btn-circle {
+            background: linear-gradient(135deg, #EF4444, #DC2626);
+            box-shadow: 0 4px 20px rgba(239,68,68,0.4);
+        }
+        .call-mute .btn-circle {
+            background: rgba(255,255,255,0.15);
+        }
+        .call-mute.muted .btn-circle {
+            background: rgba(239,68,68,0.3);
+        }
+        .call-speaker .btn-circle {
+            background: rgba(255,255,255,0.15);
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+        }
+
+        .hidden { display: none !important; }
+
+        /* Store Panel */
+        .store-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 30px rgba(0,0,0,0.15);
+            z-index: 100;
+            transform: translateY(100%);
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .store-panel.open {
+            transform: translateY(0);
+        }
+
+        .store-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px 12px;
+            border-bottom: 1px solid #F5F5F4;
+            flex-shrink: 0;
+        }
+
+        .store-panel-header h2 {
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .store-panel-close {
+            width: 32px;
+            height: 32px;
+            background: #F5F5F4;
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #78716C;
+        }
+
+        .store-panel-body {
+            padding: 12px 20px;
+            padding-bottom: calc(16px + env(safe-area-inset-bottom, 20px));
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            flex: 1;
+        }
+
+        .store-panel-body::-webkit-scrollbar { display: none; }
+
+        .location-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: #FFFBEB;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: #78716C;
+        }
+
+        .location-status svg {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
+        .store-card {
+            background: #FAFAF9;
+            border: 1px solid #F5F5F4;
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+        }
+
+        .store-card-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 6px;
+        }
+
+        .store-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1C1917;
+        }
+
+        .store-distance {
+            font-size: 13px;
+            font-weight: 600;
+            color: #EA580C;
+            white-space: nowrap;
+            padding-left: 8px;
+        }
+
+        .store-address {
+            font-size: 13px;
+            color: #78716C;
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+
+        .store-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .store-tag {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            background: rgba(249,115,22,0.08);
+            color: #EA580C;
+            font-weight: 500;
+        }
+
+        .store-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.3);
+            z-index: 99;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .store-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .loading-location {
+            text-align: center;
+            padding: 24px;
+            color: #A8A29E;
+            font-size: 14px;
+        }
+
+        /* Settings Panel */
+        .settings-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 30px rgba(0,0,0,0.15);
+            z-index: 100;
+            transform: translateY(100%);
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 60vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .settings-panel.open {
+            transform: translateY(0);
+        }
+
+        .settings-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px 12px;
+            border-bottom: 1px solid #F5F5F4;
+            flex-shrink: 0;
+        }
+
+        .settings-panel-header h2 {
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .settings-panel-body {
+            padding: 16px 20px;
+            padding-bottom: calc(16px + env(safe-area-inset-bottom, 20px));
+            overflow-y: auto;
+        }
+
+        .setting-group {
+            margin-bottom: 16px;
+        }
+
+        .setting-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1C1917;
+            margin-bottom: 6px;
+        }
+
+        .setting-desc {
+            font-size: 12px;
+            color: #A8A29E;
+            margin-bottom: 8px;
+        }
+
+        .setting-input-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .setting-input {
+            flex: 1;
+            height: 42px;
+            padding: 0 14px;
+            background: #F5F5F4;
+            border: 1.5px solid #E7E5E4;
+            border-radius: 12px;
+            font-size: 15px;
+            color: #1C1917;
+            outline: none;
+            -webkit-user-select: text;
+            user-select: text;
+        }
+
+        .setting-input:focus {
+            border-color: #F97316;
+            background: white;
+        }
+
+        .setting-save-btn {
+            height: 42px;
+            padding: 0 18px;
+            background: linear-gradient(135deg, #F97316, #EA580C);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .setting-save-btn:active {
+            transform: scale(0.96);
+        }
+
+        .setting-status {
+            margin-top: 8px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .setting-status.ok {
+            color: #16A34A;
+        }
+
+        .setting-status.no {
+            color: #DC2626;
+        }
+
+        .settings-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.3);
+            z-index: 99;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .settings-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .ai-mode-badge {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .ai-mode-badge.ai-on {
+            background: rgba(34,197,94,0.1);
+            color: #16A34A;
+        }
+
+        .ai-mode-badge.ai-off {
+            background: rgba(234,88,12,0.1);
+            color: #EA580C;
+        }
+
+        /* Voice Options */
+        .voice-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            background: #FAFAF9;
+            border: 1.5px solid #E7E5E4;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+
+        .voice-option:active {
+            transform: scale(0.98);
+        }
+
+        .voice-option.selected {
+            background: rgba(249,115,22,0.06);
+            border-color: #F97316;
+        }
+
+        .voice-option-info {
+            flex: 1;
+        }
+
+        .voice-option-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1C1917;
+        }
+
+        .voice-option-detail {
+            font-size: 12px;
+            color: #A8A29E;
+            margin-top: 2px;
+        }
+
+        .voice-option-check {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 700;
+            color: #F97316;
+        }
+
+        /* Task Checklist */
+        .task-card {
+            background: white;
+            border: 1.5px solid #FED7AA;
+            border-radius: 16px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+        }
+
+        .task-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .task-card-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1C1917;
+        }
+
+        .task-progress {
+            font-size: 12px;
+            font-weight: 600;
+            color: #F97316;
+        }
+
+        .task-progress-bar {
+            height: 4px;
+            background: #F5F5F4;
+            border-radius: 2px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+
+        .task-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #F97316, #EA580C);
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #F5F5F4;
+        }
+
+        .task-item:last-child {
+            border-bottom: none;
+        }
+
+        .task-check {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid #D6D3D1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 1px;
+            transition: all 0.3s;
+        }
+
+        .task-check.done {
+            background: linear-gradient(135deg, #22C55E, #16A34A);
+            border-color: #22C55E;
+        }
+
+        .task-check.done::after {
+            content: '\2713';
+            color: white;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .task-check.active {
+            border-color: #F97316;
+            box-shadow: 0 0 0 3px rgba(249,115,22,0.15);
+        }
+
+        .task-info {
+            flex: 1;
+        }
+
+        .task-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1C1917;
+        }
+
+        .task-name.done {
+            color: #A8A29E;
+            text-decoration: line-through;
+        }
+
+        .task-desc {
+            font-size: 12px;
+            color: #A8A29E;
+            margin-top: 2px;
+        }
+
+        .task-step-num {
+            font-size: 11px;
+            font-weight: 700;
+            color: #F97316;
+            margin-right: 4px;
+        }
+
+        .task-step-num.done {
+            color: #22C55E;
+        }
+
+        .task-complete-banner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            margin-top: 8px;
+            background: linear-gradient(135deg, rgba(34,197,94,0.1), rgba(22,163,74,0.1));
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #16A34A;
+            animation: slideUp 0.3s ease;
+        }
+
+        .task-done-btn {
+            flex-shrink: 0;
+            padding: 4px 14px;
+            border: none;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #F97316, #EA580C);
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            align-self: center;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous" async></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg width="22" height="22" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    <h1>AI 美妆助手</h1>
+                    <p>智能语音指导</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="location-btn" onclick="toggleSettingsPanel()" style="padding:6px 10px;min-width:auto;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    <span>设置</span>
+                </button>
+                <button id="storeBtn" class="location-btn" onclick="toggleStorePanel()">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <span>附近店铺</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Video -->
+        <section class="video-section">
+            <div class="video-container">
+                <video id="camera" autoplay playsinline muted></video>
+                <canvas id="faceCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;"></canvas>
+                <button id="cameraSwitchBtn" class="camera-switch-btn" onclick="switchCamera()" title="切换摄像头">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M20.015 4.356v4.992"/>
+                    </svg>
+                </button>
+                <div id="placeholder" class="video-placeholder">
+                    <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z"/>
+                    </svg>
+                    <p>请用真机测试摄像头</p>
+                    <small>模拟器无法显示真实画面</small>
+                </div>
+                <div class="video-status">
+                    <span id="aiStatus">准备就绪</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Chat -->
+        <section class="chat-section">
+            <div id="chat" class="chat-messages">
+                <div class="message msg-ai">
+                    你好！我是小美，你的 AI 美妆助手~ 我可以帮你分析肤质、推荐妆容、教你化妆，还能帮你找附近的化妆品店哦！通过摄像头还能拍照分析你的皮肤~
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <button class="quick-btn" data-text="分析我的皮肤状态">分析皮肤</button>
+                <button class="quick-btn" data-text="教我画日常妆">日常妆教程</button>
+                <button class="quick-btn" data-text="推荐适合我的口红颜色">推荐口红</button>
+                <button class="quick-btn" data-text="附近有什么化妆品店">附近店铺</button>
+                <button class="quick-btn" data-text="下一步">继续下一步</button>
+            </div>
+        </section>
+
+        <!-- Controls -->
+        <section class="controls">
+            <div class="input-row">
+                <input id="input" type="text" class="text-input" placeholder="输入消息...">
+                <button id="sendBtn" class="send-btn">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="action-row">
+                <button id="voiceBtn" class="action-btn primary">
+                    <span id="voiceIcon">
+                        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                        </svg>
+                    </span>
+                    <span id="voiceWave" class="voice-waves hidden">
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </span>
+                    <span>语音通话</span>
+                </button>
+                <button id="speakerBtn" class="action-btn secondary">
+                    <svg id="spkOn" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+                    </svg>
+                    <svg id="spkOff" class="hidden" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
+                    </svg>
+                    <span>语音播报</span>
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <!-- Store Panel Overlay -->
+    <div id="storeOverlay" class="store-overlay" onclick="toggleStorePanel()"></div>
+
+    <!-- Store Panel -->
+    <div id="storePanel" class="store-panel">
+        <div class="store-panel-header">
+            <h2>附近化妆品店</h2>
+            <button class="store-panel-close" onclick="toggleStorePanel()">&times;</button>
+        </div>
+        <div id="storePanelBody" class="store-panel-body">
+            <div class="loading-location">正在获取位置信息...</div>
+        </div>
+    </div>
+
+    <!-- Settings Panel Overlay -->
+    <div id="settingsOverlay" class="settings-overlay" onclick="toggleSettingsPanel()"></div>
+
+    <!-- Settings Panel -->
+    <div id="settingsPanel" class="settings-panel">
+        <div class="settings-panel-header">
+            <h2>语音设置</h2>
+            <button class="store-panel-close" onclick="toggleSettingsPanel()">&times;</button>
+        </div>
+        <div class="settings-panel-body">
+            <div class="setting-group">
+                <div class="setting-label">Edge 原生语音</div>
+                <div class="setting-desc">使用微软 Edge TTS，自然流畅的中文语音</div>
+                <div class="setting-status ok">已启用 · 晓晓女声</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Call Overlay -->
+    <div id="callOverlay" class="call-overlay">
+        <video id="callVideoBg" class="call-video-bg" autoplay playsinline muted></video>
+        <div id="callTaskContainer" class="call-task-container"></div>
+        <div class="call-center">
+            <div class="call-avatar-wrap">
+                <div class="call-avatar-ring"></div>
+                <div class="call-avatar-ring2"></div>
+                <div class="call-avatar">&#128132;</div>
+            </div>
+            <div class="call-name">小美</div>
+            <div class="call-status" id="callStatus">正在连接...</div>
+            <div class="call-voice-bars" id="callVoiceBars">
+                <span></span><span></span><span></span><span></span><span></span>
+                <span></span><span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="call-subtitle-area" id="callSubtitleArea"></div>
+        <div class="call-bottom">
+            <button class="call-action-btn call-mute" id="callMuteBtn" onclick="toggleCallMute()">
+                <div class="btn-circle">
+                    <svg width="28" height="28" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                    </svg>
+                </div>
+                <span class="btn-label">静音</span>
+            </button>
+            <button class="call-action-btn call-hangup" onclick="toggleCallMode()">
+                <div class="btn-circle">
+                    <svg width="32" height="32" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072M12 18.364l-1.636-1.636a8 8 0 010-9.456L12 5.636m0 12.728l1.636-1.636a8 8 0 000-9.456L12 5.636m0 0L8.464 2.1m7.072 0L12 5.636M3.343 7.778a10 10 0 0117.314 0M2.05 12a12 12 0 0119.9 0"/>
+                    </svg>
+                </div>
+                <span class="btn-label">挂断</span>
+            </button>
+            <button class="call-action-btn call-speaker" id="callSpeakerBtn" onclick="toggleCallSpeaker()">
+                <div class="btn-circle">
+                    <svg width="28" height="28" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+                    </svg>
+                </div>
+                <span class="btn-label">免提</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+
+        // 化妆品店铺数据（示例数据，按城市常见连锁店）
+        const COSMETIC_STORES = [
+            { id: 's1', name: '丝芙兰 SEPHORA', address: '市中心商业广场1层', lat: 0, lng: 0, tags: ['国际品牌', '彩妆', '护肤'] },
+            { id: 's2', name: '屈臣氏 Watsons', address: '万达广场B1层', lat: 0, lng: 0, tags: ['日用', '护肤', '平价'] },
+            { id: 's3', name: 'THE COLORIST 调色师', address: '大悦城2层L205', lat: 0, lng: 0, tags: ['潮流彩妆', '网红'] },
+            { id: 's4', name: '完美日记体验店', address: '太古里北街18号', lat: 0, lng: 0, tags: ['国货', '彩妆'] },
+            { id: 's5', name: '妍丽 COSMO', address: '银泰百货3层', lat: 0, lng: 0, tags: ['高端护肤', '进口'] },
+            { id: 's6', name: '名创优品美妆区', address: '步行街中段88号', lat: 0, lng: 0, tags: ['平价', '日用'] },
+            { id: 's7', name: 'WOW COLOUR', address: '龙湖天街1层', lat: 0, lng: 0, tags: ['潮流', '彩妆集合'] },
+            { id: 's8', name: '植村秀专柜', address: 'SKP百货1层', lat: 0, lng: 0, tags: ['高端彩妆', '卸妆油'] },
+        ];
+
+        const $ = id => document.getElementById(id);
+        let stream = null;
+        let listening = false;
+        let processing = false;
+        let voiceEnabled = true;
+        let history = [];
+        let userLat = null;
+        let userLng = null;
+        let storePanelOpen = false;
+        let settingsPanelOpen = false;
+        let aiEnabled = true; // 内置默认 API Key，开箱即用
+        let aiCallbacks = {}; // 请求ID -> {resolve, reject} 的映射
+        let aiCallIdCounter = 0;
+        let callMode = false; // 通话模式：像打电话一样连续对话
+        let speaking = false; // TTS是否正在播报
+        const PRIVACY_CONSENT_KEY = 'vision_upload_consent';
+        let visionConsentGranted = localStorage.getItem(PRIVACY_CONSENT_KEY) === '1';
+
+        // 摄像头方向：'user' = 前置，'environment' = 后置
+        let currentFacingMode = 'user';
+        let cameraSwitching = false;
+
+        // 初始化摄像头（带重试，WKWebView权限可能需要时间）
+        async function initCamera(retries) {
+            retries = retries || 0;
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                $('placeholder').querySelector('p').textContent = '摄像头API不可用';
+                $('placeholder').querySelector('small').textContent = '请确保使用真机运行';
+                return;
+            }
+
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: currentFacingMode, width: { ideal: 640 }, height: { ideal: 480 } },
+                    audio: false
+                });
+                $('camera').srcObject = stream;
+                await $('camera').play();
+                $('placeholder').classList.add('hidden');
+                // 不镜像，直接显示原始画面
+                $('camera').style.transform = 'none';
+                $('faceCanvas').style.transform = 'none';
+                // 同步到通话界面背景
+                if (callMode) syncCallVideo();
+                // 摄像头就绪后初始化人脸网格检测
+                initFaceMesh();
+                // 自动启动 Gemini Live 实时分析
+                setTimeout(() => {
+                    if (visionEnabled) {
+                        startGeminiLive();
+                    }
+                }, 1000);
+            } catch (e) {
+                if (retries < 3) {
+                    // 重试，每次间隔递增
+                    setTimeout(() => initCamera(retries + 1), 1000 * (retries + 1));
+                } else {
+                    $('placeholder').querySelector('p').textContent = '无法访问摄像头';
+                    $('placeholder').querySelector('small').textContent = e.message || '请检查权限设置';
+                }
+            }
+        }
+
+        // 切换前后摄像头
+        async function switchCamera() {
+            if (cameraSwitching) return;
+            cameraSwitching = true;
+
+            // 停止人脸检测
+            stopNativeFaceDetection();
+
+            // 停止当前摄像头流
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+
+            // 切换方向
+            currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+
+            // 重新初始化摄像头
+            await initCamera();
+            cameraSwitching = false;
+        }
+
+        // 截取画面（高清版用于视觉检测）
+        function captureFrame(highRes) {
+            if (!stream) return null;
+            const canvas = document.createElement('canvas');
+            const w = highRes ? 640 : 320;
+            const h = highRes ? 480 : 240;
+            const q = highRes ? 0.85 : 0.6;
+            canvas.width = w;
+            canvas.height = h;
+            canvas.getContext('2d').drawImage($('camera'), 0, 0, w, h);
+            return canvas.toDataURL('image/jpeg', q).split(',')[1];
+        }
+
+        function ensureVisionConsent() {
+            if (visionConsentGranted) return true;
+            const ok = window.confirm('拍照分析需要上传当前画面到AI服务进行处理。是否同意？');
+            if (ok) {
+                visionConsentGranted = true;
+                localStorage.setItem(PRIVACY_CONSENT_KEY, '1');
+            }
+            return ok;
+        }
+
+        // =====================================================
+        // 原生语音识别桥接（替代 Web Speech API）
+        // =====================================================
+
+        // 从 Swift 原生调用的回调函数
+        window.nativeSpeechStarted = function() {
+            listening = true;
+            // 通话模式下不切换按钮图标/动画，保持按钮稳定不抖动
+            if (!callMode) {
+                $('voiceIcon').classList.add('hidden');
+                $('voiceWave').classList.remove('hidden');
+                $('voiceBtn').classList.add('listening');
+            }
+            // 通话模式下不在录音开始时打断TTS，只在检测到用户实际说话时打断（见 nativeSpeechPartial）
+            $('aiStatus').textContent = callMode ? '正在听你说...' : '正在听...';
+            if (callMode && !speaking) updateCallOverlayStatus('正在听你说...');
+        };
+
+        // 实时显示语音识别的部分结果
+        let lastPartialUpdate = 0;
+        let _nativeSilenceTimer = null; // 原生识别静默计时器
+        let _lastPartialText = '';      // 最后一次 partial 文本
+        const NATIVE_SILENCE_TIMEOUT = 1500; // 1.5秒无新partial则停止录音，强制出final结果
+
+        window.nativeSpeechPartial = function(text) {
+            const now = Date.now();
+            if (now - lastPartialUpdate < 200) return;
+            lastPartialUpdate = now;
+            if (text && text.trim()) {
+                const t = text.trim();
+                // Whisper 状态提示只显示在状态栏，不显示为字幕
+                if (t === '识别中...' || t === '正在听...' || t === '超时，正在识别...') {
+                    $('aiStatus').textContent = t;
+                    if (callMode) updateCallOverlayStatus(t);
+                    return;
+                }
+                $('aiStatus').textContent = text;
+                if (callMode) showCallSubtitle(text, 'user');
+                _lastPartialText = text.trim();
+                // 通话模式下：收到partial后启动静默计时器
+                // 如果2秒内没有新partial或final，手动停止录音强制出结果
+                if (callMode && !processing) {
+                    if (_nativeSilenceTimer) clearTimeout(_nativeSilenceTimer);
+                    _nativeSilenceTimer = setTimeout(() => {
+                        _nativeSilenceTimer = null;
+                        if (callMode && listening && !processing && !speaking && _lastPartialText) {
+                            // 强制停止录音，触发 SFSpeechRecognizer 输出 isFinal=true
+                            stopListening();
+                        }
+                    }, NATIVE_SILENCE_TIMEOUT);
+                }
+            }
+        };
+
+        window.nativeSpeechResult = function(text) {
+            console.log('[语音识别] nativeSpeechResult 被调用，文本:', text);
+            // 清除静默计时器
+            if (_nativeSilenceTimer) { clearTimeout(_nativeSilenceTimer); _nativeSilenceTimer = null; }
+            _lastPartialText = '';
+            listening = false;
+            resetVoiceUI();
+
+            // 强制更新状态显示
+            $('aiStatus').textContent = callMode ? '小美正在思考...' : '准备就绪';
+
+            if (text && text.trim()) {
+                // 显示用户说话的字幕
+                if (callMode) showCallSubtitle(text.trim(), 'user');
+                handleInput(text.trim());
+            }
+        };
+
+        window.nativeSpeechEnded = function() {
+            console.log('[语音识别] nativeSpeechEnded 被调用');
+            if (_nativeSilenceTimer) { clearTimeout(_nativeSilenceTimer); _nativeSilenceTimer = null; }
+            const hadText = _lastPartialText && _lastPartialText.trim();
+            console.log('[语音识别] hadText:', hadText, 'callMode:', callMode);
+            _lastPartialText = '';
+            listening = false;
+            resetVoiceUI();
+
+            // 强制更新状态显示
+            $('aiStatus').textContent = callMode ? '小美正在思考...' : '准备就绪';
+
+            // 通话模式下：只有在没识别到内容时才自动重新开始听
+            // 如果识别到了内容，等AI回复完再开始听
+            if (callMode && !hadText && !processing && !speaking && !_streamTTSActive) {
+                console.log('[语音识别] 通话模式：没有识别到内容，300ms后重新开始监听');
+                setTimeout(() => {
+                    if (callMode && !listening && !processing && !speaking && !_streamTTSActive) {
+                        startListening();
+                    }
+                }, 300);
+            } else if (callMode && hadText) {
+                console.log('[语音识别] 通话模式：识别到内容，等待AI处理');
+            }
+        };
+
+        window.nativeSpeechError = function(error) {
+            if (_nativeSilenceTimer) { clearTimeout(_nativeSilenceTimer); _nativeSilenceTimer = null; }
+            _lastPartialText = '';
+            listening = false;
+            resetVoiceUI();
+            // 通话模式下自动重试（除非正在播报）
+            if (callMode && !processing && !speaking) {
+                setTimeout(() => {
+                    if (callMode && !listening && !processing && !speaking) {
+                        startListening();
+                    }
+                }, 1000);
+            }
+        };
+
+        function resetVoiceUI() {
+            // 通话模式下不切换按钮图标，保持稳定
+            if (!callMode) {
+                $('voiceIcon').classList.remove('hidden');
+                $('voiceWave').classList.add('hidden');
+                $('voiceBtn').classList.remove('listening');
+                $('aiStatus').textContent = '准备就绪';
+            }
+        }
+
+        // 开始录音的统一入口（带节流，防止快速循环导致界面乱动）
+        let lastListenTime = 0;
+        function startListening() {
+            const now = Date.now();
+            const minInterval = callMode ? 500 : 1500;
+            if (now - lastListenTime < minInterval) return;
+            if (listening || processing) return;
+            // TTS播放时不开麦克风，避免回声触发误打断
+            if (speaking || _streamTTSActive) return;
+            lastListenTime = now;
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.startVoice) {
+                window.webkit.messageHandlers.startVoice.postMessage({});
+            }
+        }
+
+        // 停止录音
+        function stopListening() {
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.stopVoice) {
+                window.webkit.messageHandlers.stopVoice.postMessage({});
+            }
+        }
+
+        // =====================================================
+        // 通话模式：Web Speech API 持续识别（参考 test8.html）
+        // continuous: true 保持持续识别，不会每句话都断开重连
+        // interimResults: true 实时显示识别文字
+        // 静默检测：2.5秒无新语音则处理积累文本
+        // =====================================================
+        let callRecognition = null;
+        let callSilenceTimer = null;
+        let callLastSoundTime = 0;
+        let callInterimText = '';
+        const CALL_SILENCE_TIMEOUT = 2500;
+        let callRecogLastActivity = 0; // watchdog: 识别最后活跃时间
+
+        function startCallModeRecognition() {
+            if (callMuted) return;
+            // 始终使用原生语音识别（Native SFSpeechRecognizer），
+            // 避免 WKWebView 中 Web Speech API 在 Edge TTS 播放后
+            // 因音频会话冲突导致识别失效
+            if (!listening && !processing) {
+                lastListenTime = 0; // 绕过节流
+                startListening();
+            }
+        }
+
+        function stopCallModeRecognition() {
+            stopCallSilenceDetection();
+            if (_nativeSilenceTimer) { clearTimeout(_nativeSilenceTimer); _nativeSilenceTimer = null; }
+            _lastPartialText = '';
+            if (listening) stopListening();
+            callInterimText = '';
+            listening = false;
+        }
+
+        function startCallSilenceDetection() {
+            stopCallSilenceDetection();
+            callSilenceTimer = setInterval(() => {
+                if (!callMode) { stopCallSilenceDetection(); return; }
+                if (processing) return;
+
+                const elapsed = Date.now() - callLastSoundTime;
+                if (elapsed >= CALL_SILENCE_TIMEOUT && callInterimText && callInterimText.length > 0) {
+                    const text = callInterimText;
+                    callInterimText = '';
+
+                    // 停止当前识别（会在 onend 中自动重启）
+                    if (callRecognition) {
+                        try { callRecognition.stop(); } catch(e) {}
+                    }
+
+                    if (!processing) {
+                        handleInput(text);
+                    }
+                }
+            }, 500);
+        }
+
+        function stopCallSilenceDetection() {
+            if (callSilenceTimer) {
+                clearInterval(callSilenceTimer);
+                callSilenceTimer = null;
+            }
+        }
+
+        // 通话计时器
+        let callTimerInterval = null;
+        let callStartTime = 0;
+
+        // 通话声波动画
+        let callVoiceBarsInterval = null;
+
+        function startCallTimer() {
+            callStartTime = Date.now();
+            $('callTimer').textContent = '00:00';
+            callTimerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+                const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+                const s = String(elapsed % 60).padStart(2, '0');
+                $('callTimer').textContent = m + ':' + s;
+            }, 1000);
+        }
+
+        function stopCallTimer() {
+            if (callTimerInterval) { clearInterval(callTimerInterval); callTimerInterval = null; }
+        }
+
+        // 声波动画：根据状态显示不同波形
+        function startCallVoiceBars() {
+            const bars = $('callVoiceBars');
+            if (!bars) return;
+            bars.classList.add('active');
+            const spans = bars.querySelectorAll('span');
+            callVoiceBarsInterval = setInterval(() => {
+                if (speaking) {
+                    // AI 说话：橙色较大波形
+                    bars.classList.remove('listening');
+                    spans.forEach(s => {
+                        s.style.height = (8 + Math.random() * 24) + 'px';
+                    });
+                } else if (listening) {
+                    // 用户说话：绿色较小波形
+                    bars.classList.add('listening');
+                    spans.forEach(s => {
+                        s.style.height = (4 + Math.random() * 16) + 'px';
+                    });
+                } else {
+                    // 空闲：微小波动
+                    bars.classList.remove('listening');
+                    spans.forEach(s => {
+                        s.style.height = (3 + Math.random() * 5) + 'px';
+                    });
+                }
+            }, 120);
+        }
+
+        function stopCallVoiceBars() {
+            if (callVoiceBarsInterval) { clearInterval(callVoiceBarsInterval); callVoiceBarsInterval = null; }
+            const bars = $('callVoiceBars');
+            if (bars) {
+                bars.classList.remove('active');
+                bars.classList.remove('listening');
+            }
+        }
+
+        // 更新通话界面状态
+        function updateCallOverlayStatus(text) {
+            const s = $('callStatus');
+            if (s) s.textContent = text;
+        }
+
+        // ===== 字幕系统（逐字显示） =====
+        let _subtitleTimer = null;
+        let _subtitleQueue = [];
+
+        // 显示字幕（逐字打字机效果）
+        function showCallSubtitle(text, type) {
+            // type: 'ai' 或 'user'
+            if (!callMode || !text) return;
+            const area = $('callSubtitleArea');
+            if (!area) return;
+
+            // 清除之前的同类型字幕
+            const old = area.querySelector('.call-subtitle.' + type);
+            if (old) old.remove();
+
+            // 清除旧的打字定时器
+            if (type === 'ai' && _subtitleTimer) {
+                clearInterval(_subtitleTimer);
+                _subtitleTimer = null;
+            }
+
+            const div = document.createElement('div');
+            div.className = 'call-subtitle ' + type;
+
+            if (type === 'user') {
+                // 用户文字直接显示（实时跟随识别）
+                div.textContent = text;
+                area.appendChild(div);
+                // 3秒后自动消失
+                setTimeout(() => { if (div.parentNode) div.remove(); }, 5000);
+            } else {
+                // AI 回复逐字显示
+                div.innerHTML = '<span class="cursor"></span>';
+                area.appendChild(div);
+                let idx = 0;
+                const chars = text.split('');
+                _subtitleTimer = setInterval(() => {
+                    if (idx < chars.length) {
+                        // 移除光标，添加字符，再加光标
+                        const cursor = div.querySelector('.cursor');
+                        if (cursor) cursor.remove();
+                        div.appendChild(document.createTextNode(chars[idx]));
+                        // 还有后续字符才加光标
+                        if (idx < chars.length - 1) {
+                            const c = document.createElement('span');
+                            c.className = 'cursor';
+                            div.appendChild(c);
+                        }
+                        idx++;
+                    } else {
+                        clearInterval(_subtitleTimer);
+                        _subtitleTimer = null;
+                        // 移除光标
+                        const cursor = div.querySelector('.cursor');
+                        if (cursor) cursor.remove();
+                        // 显示5秒后淡出
+                        setTimeout(() => { if (div.parentNode) div.remove(); }, 8000);
+                    }
+                }, 80); // 每80ms显示一个字
+            }
+
+            // 最多保留2条字幕
+            while (area.children.length > 2) {
+                area.removeChild(area.firstChild);
+            }
+        }
+
+        function clearCallSubtitles() {
+            if (_subtitleTimer) { clearInterval(_subtitleTimer); _subtitleTimer = null; }
+            const area = $('callSubtitleArea');
+            if (area) area.innerHTML = '';
+        }
+
+        // 同步摄像头到通话界面
+        function syncCallVideo() {
+            const callVideo = $('callVideoBg');
+            const mainVideo = $('camera');
+            if (!callVideo || !mainVideo) return;
+            if (mainVideo.srcObject) {
+                callVideo.srcObject = mainVideo.srcObject;
+            }
+        }
+
+        // 静音功能
+        let callMuted = false;
+        function toggleCallMute() {
+            callMuted = !callMuted;
+            const btn = $('callMuteBtn');
+            if (callMuted) {
+                btn.classList.add('muted');
+                btn.querySelector('.btn-label').textContent = '取消静音';
+                stopCallModeRecognition();
+                updateCallOverlayStatus('已静音');
+            } else {
+                btn.classList.remove('muted');
+                btn.querySelector('.btn-label').textContent = '静音';
+                if (callMode && !processing && !speaking) {
+                    startCallModeRecognition();
+                }
+                updateCallOverlayStatus('正在听你说...');
+            }
+        }
+
+        // 免提（切换语音播报）
+        function toggleCallSpeaker() {
+            voiceEnabled = !voiceEnabled;
+            $('spkOn').classList.toggle('hidden', !voiceEnabled);
+            $('spkOff').classList.toggle('hidden', voiceEnabled);
+            if (!voiceEnabled) stopSpeak();
+            const btn = $('callSpeakerBtn');
+            btn.querySelector('.btn-label').textContent = voiceEnabled ? '免提' : '听筒';
+        }
+
+        // 进入/退出通话模式
+        function toggleCallMode() {
+            console.log('[通话] toggleCallMode 被调用，当前 callMode:', callMode);
+            if (callMode) {
+                // 退出通话模式
+                callMode = false;
+                callMuted = false;
+                stopCallModeRecognition();
+                if (speaking) stopSpeak();
+                stopCallTimer();
+                stopCallVoiceBars();
+                clearCallSubtitles();
+                // 停止 Gemini Live
+                stopGeminiLiveForCall();
+                // 隐藏通话界面
+                console.log('[通话] 隐藏通话界面');
+                $('callOverlay').classList.remove('active');
+                // 停止通话背景视频
+                const cv = $('callVideoBg');
+                if (cv) { cv.srcObject = null; }
+                // 恢复按钮原始状态
+                $('voiceIcon').classList.remove('hidden');
+                $('voiceWave').classList.add('hidden');
+                $('voiceBtn').classList.remove('listening');
+                $('voiceBtn').classList.remove('call-mode');
+                $('voiceBtn').querySelector('span:last-child').textContent = '语音通话';
+                $('aiStatus').textContent = '准备就绪';
+                // 恢复静音按钮
+                $('callMuteBtn').classList.remove('muted');
+                $('callMuteBtn').querySelector('.btn-label').textContent = '静音';
+            } else {
+                // 进入通话模式
+                console.log('[通话] 进入通话模式');
+                callMode = true;
+                if (listening) stopListening();
+                // 显示全屏通话界面
+                const overlay = $('callOverlay');
+                console.log('[通话] callOverlay 元素:', overlay);
+                overlay.classList.add('active');
+                console.log('[通话] 已添加 active 类，classList:', overlay.classList.toString());
+                updateCallOverlayStatus('正在连接...');
+                clearCallSubtitles();
+                syncCallVideo();
+                startCallTimer();
+                startCallVoiceBars();
+                // 底部按钮也更新
+                $('voiceBtn').classList.add('call-mode');
+                $('voiceBtn').querySelector('span:last-child').textContent = '挂断';
+
+                // 启动 Gemini Live 实时语音对话
+                startGeminiLiveForCall();
+
+                // 等待连接建立后开始识别
+                setTimeout(() => {
+                    updateCallOverlayStatus('正在听你说...');
+                    showCallSubtitle('我在呢，你说~', 'ai');
+                    // 使用 Gemini Live 发送欢迎消息
+                    sendTextToGeminiLive('你好');
+                    setTimeout(() => {
+                        if (callMode && !listening) {
+                            startCallModeRecognition();
+                        }
+                    }, 500);
+                }, 1000);
+            }
+        }
+
+        // =====================================================
+        // 原生定位桥接
+        // =====================================================
+
+        window.nativeLocationUpdate = function(lat, lng) {
+            userLat = lat;
+            userLng = lng;
+            // 根据用户位置更新店铺坐标（模拟附近店铺）
+            randomizeStoresAround(lat, lng);
+            if (storePanelOpen) {
+                renderStoreList();
+            }
+        };
+
+        window.nativeLocationError = function(error) {
+            if (storePanelOpen) {
+                $('storePanelBody').innerHTML = '<div class="loading-location">定位失败：' + error + '<br>请在设置中开启定位权限</div>';
+            }
+        };
+
+        window.nativeDistanceResult = function(id, distance) {
+            const el = document.querySelector('[data-store-id="' + id + '"] .store-distance');
+            if (el) {
+                el.textContent = formatDistance(distance);
+            }
+        };
+
+        // 在用户位置附近随机生成店铺坐标（演示用）
+
+        // =====================================================
+        // DeepSeek AI 桥接
+        // =====================================================
+
+        window.nativeAIResponse = function(text, callId) {
+            console.log('[AI] 完整响应接收，callId:', callId, '长度:', text.length, '内容:', text.substring(0, 100));
+            const cb = aiCallbacks[callId];
+            if (cb) {
+                cb.resolve(text);
+                delete aiCallbacks[callId];
+            }
+        };
+
+        window.nativeAIError = function(error, callId) {
+            console.error('[AI] 响应错误，callId:', callId, '错误:', error);
+            const cb = aiCallbacks[callId];
+            if (cb) {
+                cb.reject(new Error(error));
+                delete aiCallbacks[callId];
+            }
+        };
+
+        // 流式AI响应：边生成边显示 + 通话模式边生成边播报
+        let _streamingDiv = null;
+        let _streamingCallId = null;
+        let _streamSentenceQueue = [];   // 待播报的句子队列
+        let _streamSentenceBuffer = '';  // 当前积累的不完整句子
+        let _streamTTSActive = false;    // 是否正在逐句播报
+        let _streamingSpoke = false;     // 本次回复是否用了逐句播报
+
+        let _streamingRawText = '';      // 累积原始文本（含标记）
+
+        window.nativeAIChunk = function(chunk, callId) {
+            console.log('[AI] 流式块接收，callId:', callId, '块长度:', chunk.length, '内容:', chunk.substring(0, 50));
+            // 视觉：流式显示文字
+            if (!_streamingDiv || _streamingCallId !== callId) {
+                hideTyping();
+                _streamingDiv = document.createElement('div');
+                _streamingDiv.className = 'message msg-ai';
+                _streamingDiv.textContent = '';
+                _streamingCallId = callId;
+                _streamingRawText = '';
+                $('chat').appendChild(_streamingDiv);
+            }
+            _streamingRawText += chunk;
+            // 显示时过滤掉 [CHECKLIST]...[/CHECKLIST]、[DONE:n]、[ALLDONE] 标记
+            _streamingDiv.textContent = _streamingRawText
+                .replace(/\[CHECKLIST\][\s\S]*?(\[\/CHECKLIST\]|$)/g, '')
+                .replace(/\[DONE:\d+\]/g, '')
+                .replace(/\[ALLDONE\]/g, '')
+                .trim();
+            $('chat').scrollTop = $('chat').scrollHeight;
+
+            // 逐句播报：检测句子边界，边输出边说话（语音播报启用时）
+            if (voiceEnabled) {
+                // 检测到任务清单标记时，跳过流式播报（让 processTaskMarkers 统一处理）
+                if (_streamingRawText.includes('[CHECKLIST]')) {
+                    return;
+                }
+                _streamSentenceBuffer += chunk;
+                // 在中英文句号/叹号/问号处断句，让句子更完整流畅
+                const re = /[。！？.!?]/;
+                let match;
+                while ((match = re.exec(_streamSentenceBuffer)) !== null) {
+                    const sentence = _streamSentenceBuffer.substring(0, match.index + 1).trim();
+                    _streamSentenceBuffer = _streamSentenceBuffer.substring(match.index + 1);
+                    if (sentence && sentence.length > 1) {
+                        _streamSentenceQueue.push(sentence);
+                    }
+                }
+                // 只要有1句话就立即播报，减少等待时间
+                if (_streamSentenceQueue.length >= 1 && !_streamTTSActive) {
+                    _streamingSpoke = true;
+                    _speakNextStream();
+                }
+            }
+        };
+
+        function _speakNextStream() {
+            if (_streamSentenceQueue.length === 0) {
+                _streamTTSActive = false;
+                return;
+            }
+            _streamTTSActive = true;
+            speaking = true;
+            // 快速播报第一句，减少等待时间
+            let combinedText = _streamSentenceQueue.shift();
+            while (_streamSentenceQueue.length > 0 && combinedText.length < 30) {
+                combinedText += _streamSentenceQueue.shift();
+            }
+            if (callMode) {
+                showCallSubtitle(combinedText, 'ai');
+                updateCallOverlayStatus('小美正在说...');
+                $('aiStatus').textContent = '小美正在说...';
+            }
+            if (_speakSafety) clearTimeout(_speakSafety);
+            _speakSafety = setTimeout(() => {
+                if (speaking || _streamTTSActive) {
+                    // 超时：停止当前句子，跳到下一句（不清空整个队列）
+                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.stopSpeak) {
+                        window.webkit.messageHandlers.stopSpeak.postMessage({});
+                    }
+                    if (_streamSentenceQueue.length > 0) {
+                        _speakNextStream();
+                    } else {
+                        _streamTTSActive = false;
+                        speaking = false;
+                        if (callMode && !listening && !processing) {
+                            setTimeout(() => {
+                                if (callMode && !listening && !processing && !speaking) {
+                                    startCallModeRecognition();
+                                }
+                            }, 500);
+                        }
+                    }
+                }
+            }, 12000);
+            // 清理符号
+            const cleanText = cleanTextForSpeech(combinedText);
+            console.log('[TTS] 原文:', combinedText.substring(0, 50), '清理后:', cleanText.substring(0, 50));
+            // 如果清理后文本太短或为空，跳过播报，继续下一句
+            if (!cleanText || cleanText.length < 2) {
+                console.log('[TTS] 文本太短，跳过:', cleanText);
+                if (_streamSentenceQueue.length > 0) {
+                    _speakNextStream();
+                } else {
+                    _streamTTSActive = false;
+                    speaking = false;
+                }
+                return;
+            }
+            console.log('[TTS] 发送播报请求，剩余队列:', _streamSentenceQueue.length);
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeSpeak) {
+                window.webkit.messageHandlers.nativeSpeak.postMessage({ text: cleanText, rate: 0.52, pitch: 1.1 });
+            }
+        }
+
+        function _flushStreamBuffer() {
+            if (_streamSentenceBuffer.trim()) {
+                _streamSentenceQueue.push(_streamSentenceBuffer.trim());
+                _streamSentenceBuffer = '';
+            }
+            if (!_streamTTSActive && _streamSentenceQueue.length > 0) {
+                _streamingSpoke = true;
+                _speakNextStream();
+            }
+        }
+
+        function _clearStreamQueue() {
+            _streamSentenceQueue = [];
+            _streamSentenceBuffer = '';
+            _streamTTSActive = false;
+            _streamingSpoke = false;
+        }
+
+        window.nativeAPIKeySet = function(configured) {
+            aiEnabled = configured;
+            updateAIBadge();
+            if (configured) {
+                $('apiKeyStatus').className = 'setting-status ok';
+                $('apiKeyStatus').textContent = 'API Key 已保存 · AI 模式已开启';
+            }
+        };
+
+        window.nativeAPIKeyStatus = function(hasKey, maskedKey) {
+            aiEnabled = hasKey;
+            updateAIBadge();
+            if (hasKey) {
+                $('apiKeyInput').placeholder = maskedKey;
+                $('apiKeyStatus').className = 'setting-status ok';
+                $('apiKeyStatus').textContent = 'AI 已连接 · ' + maskedKey;
+            } else {
+                $('apiKeyStatus').className = 'setting-status no';
+                $('apiKeyStatus').textContent = '未配置 · 当前为演示模式';
+            }
+        };
+
+        // 智谱AI Key 回调
+        let visionEnabled = false;
+        window.nativeGeminiKeySet = function(configured) {
+            visionEnabled = configured;
+            if (configured) {
+                $('geminiKeyStatus').className = 'setting-status ok';
+                $('geminiKeyStatus').textContent = '已配置 · Gemini 拍照分析可用';
+            }
+        };
+
+        window.nativeGeminiKeyStatus = function(hasKey, maskedKey) {
+            visionEnabled = visionEnabled || hasKey;
+            if (hasKey) {
+                $('geminiKeyInput').placeholder = maskedKey;
+                $('geminiKeyStatus').className = 'setting-status ok';
+                $('geminiKeyStatus').textContent = '已连接 · ' + maskedKey;
+            } else {
+                $('geminiKeyStatus').className = 'setting-status no';
+                $('geminiKeyStatus').textContent = '未配置';
+            }
+        };
+
+        window.nativeZhipuKeySet = function(configured) {
+            visionEnabled = visionEnabled || configured;
+            if (configured) {
+                $('zhipuKeyStatus').className = 'setting-status ok';
+                $('zhipuKeyStatus').textContent = '已配置 · 拍照分析可用';
+            }
+        };
+
+        window.nativeZhipuKeyStatus = function(hasKey, maskedKey) {
+            visionEnabled = visionEnabled || hasKey;
+            if (hasKey) {
+                $('zhipuKeyInput').placeholder = maskedKey;
+                $('zhipuKeyStatus').className = 'setting-status ok';
+                $('zhipuKeyStatus').textContent = '已连接 · ' + maskedKey;
+            } else {
+                $('zhipuKeyStatus').className = 'setting-status no';
+                $('zhipuKeyStatus').textContent = '未配置 · 拍照分析不可用';
+            }
+        };
+
+        // Whisper 语音识别 Key 回调
+        window.nativeWhisperKeySet = function(configured) {
+            if (configured) {
+                $('whisperKeyStatus').className = 'setting-status ok';
+                $('whisperKeyStatus').textContent = '已配置 · AI 语音识别已启用';
+            } else {
+                $('whisperKeyStatus').className = 'setting-status no';
+                $('whisperKeyStatus').textContent = '未配置 · 使用系统语音识别';
+            }
+        };
+
+        window.nativeWhisperKeyStatus = function(hasKey, maskedKey) {
+            if (hasKey) {
+                $('whisperKeyInput').placeholder = maskedKey;
+                $('whisperKeyStatus').className = 'setting-status ok';
+                $('whisperKeyStatus').textContent = '已连接 · ' + maskedKey;
+            } else {
+                $('whisperKeyStatus').className = 'setting-status no';
+                $('whisperKeyStatus').textContent = '未配置 · 使用系统语音识别';
+            }
+        };
+
+        // 空的回调函数（兼容 Swift 调用）
+        window.nativeCloudVoiceSet = function(success) {};
+        window.nativeCloudTTSStatus = function(isCloud, cloudVoice) {};
+        window.nativeVoiceSet = function(success) {};
+        window.nativeVoiceList = function(voices) {};
+
+        function updateAIBadge() {
+            const badge = $('aiModeBadge');
+            if (aiEnabled) {
+                badge.className = 'ai-mode-badge ai-on';
+                badge.textContent = 'AI 已连接';
+            } else {
+                badge.className = 'ai-mode-badge ai-off';
+                badge.textContent = '演示模式';
+            }
+        }
+
+        function toggleSettingsPanel() {
+            settingsPanelOpen = !settingsPanelOpen;
+            $('settingsPanel').classList.toggle('open', settingsPanelOpen);
+            $('settingsOverlay').classList.toggle('open', settingsPanelOpen);
+        }
+
+        // imageBase64 可以是单张图(string)或多张图(array)，temperature可选
+        function callNativeAI(messages, imageBase64, temperature, isCallMode) {
+            return new Promise((resolve, reject) => {
+                const callId = String(++aiCallIdCounter);
+                aiCallbacks[callId] = { resolve, reject };
+
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.callAI) {
+                    const payload = { messages: messages, callId: callId };
+                    if (temperature !== undefined) payload.temperature = temperature;
+                    if (isCallMode) payload.callMode = true;
+                    if (Array.isArray(imageBase64)) {
+                        payload.images = imageBase64;
+                    } else if (imageBase64) {
+                        payload.image = imageBase64;
+                    }
+                    window.webkit.messageHandlers.callAI.postMessage(payload);
+                } else {
+                    delete aiCallbacks[callId];
+                    reject(new Error('AI 桥接不可用'));
+                }
+
+                // 超时：通话模式30秒，普通模式60秒（延长超时避免截断）
+                const timeout = isCallMode ? 30000 : 60000;
+                setTimeout(() => {
+                    if (aiCallbacks[callId]) {
+                        console.error('[AI] 响应超时，callId:', callId);
+                        aiCallbacks[callId].reject(new Error('AI 响应超时'));
+                        delete aiCallbacks[callId];
+                    }
+                }, timeout);
+            });
+        }
+
+        // 在用户位置附近随机生成店铺坐标（演示用）
+        function randomizeStoresAround(lat, lng) {
+            COSMETIC_STORES.forEach((store, i) => {
+                // 在 0.5~5km 范围内随机分布
+                const angle = (i / COSMETIC_STORES.length) * Math.PI * 2;
+                const dist = 0.005 + Math.random() * 0.04; // ~0.5km to ~4.5km
+                store.lat = lat + dist * Math.cos(angle);
+                store.lng = lng + dist * Math.sin(angle);
+            });
+        }
+
+        function formatDistance(meters) {
+            if (meters < 1000) {
+                return Math.round(meters) + 'm';
+            }
+            return (meters / 1000).toFixed(1) + 'km';
+        }
+
+        function calcDistance(lat1, lng1, lat2, lng2) {
+            // Haversine 公式
+            const R = 6371000;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        function getStoreDistanceText(store) {
+            if (userLat === null || userLng === null || store.lat === 0) return '定位中...';
+            const dist = calcDistance(userLat, userLng, store.lat, store.lng);
+            return formatDistance(dist);
+        }
+
+        function getStoresWithDistance() {
+            return COSMETIC_STORES.map(s => ({
+                ...s,
+                dist: (userLat !== null && userLng !== null && s.lat !== 0)
+                    ? calcDistance(userLat, userLng, s.lat, s.lng)
+                    : Infinity
+            })).sort((a, b) => a.dist - b.dist);
+        }
+
+        function renderStoreList() {
+            const body = $('storePanelBody');
+
+            if (userLat === null || userLng === null) {
+                body.innerHTML = '<div class="loading-location">正在获取位置信息...</div>';
+                // 请求原生定位
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.requestLocation) {
+                    window.webkit.messageHandlers.requestLocation.postMessage({});
+                }
+                return;
+            }
+
+            const stores = getStoresWithDistance();
+            let html = '<div class="location-status"><svg fill="none" stroke="#16A34A" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4m10-10h-4M6 12H2"/></svg><span>已定位 · 为你找到 ' + stores.length + ' 家附近化妆品店</span></div>';
+
+            stores.forEach(store => {
+                html += '<div class="store-card" data-store-id="' + store.id + '">';
+                html += '<div class="store-card-head">';
+                html += '<div class="store-name">' + store.name + '</div>';
+                html += '<div class="store-distance">' + formatDistance(store.dist) + '</div>';
+                html += '</div>';
+                html += '<div class="store-address">' + store.address + '</div>';
+                html += '<div class="store-tags">';
+                store.tags.forEach(tag => {
+                    html += '<span class="store-tag">' + tag + '</span>';
+                });
+                html += '</div>';
+                html += '</div>';
+            });
+
+            body.innerHTML = html;
+        }
+
+        function toggleStorePanel() {
+            storePanelOpen = !storePanelOpen;
+            $('storePanel').classList.toggle('open', storePanelOpen);
+            $('storeOverlay').classList.toggle('open', storePanelOpen);
+
+            if (storePanelOpen) {
+                renderStoreList();
+                // 请求原生定位
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.requestLocation) {
+                    window.webkit.messageHandlers.requestLocation.postMessage({});
+                }
+            }
+        }
+
+        // 生成附近店铺的文字描述
+        function getNearbyStoresDescription() {
+            if (userLat === null || userLng === null) {
+                return '正在获取你的位置，请稍等片刻... 你也可以点击右上角"附近店铺"按钮查看详情。';
+            }
+            const stores = getStoresWithDistance();
+            const top3 = stores.slice(0, 3);
+            let desc = '根据你的位置，为你找到以下附近化妆品店：\n\n';
+            top3.forEach((s, i) => {
+                desc += (i + 1) + '. ' + s.name + ' - ' + formatDistance(s.dist) + '\n   地址：' + s.address + '\n';
+            });
+            desc += '\n共找到 ' + stores.length + ' 家店铺，点击右上角"附近店铺"可查看全部。';
+            return desc;
+        }
+
+        // 清理文本中的符号，为盲人用户保留清晰的停顿
+        function cleanTextForSpeech(text) {
+            return text
+                // 移除 emoji 表情符号（不读出来）
+                .replace(/[\u{1F600}-\u{1F64F}]/gu, '') // 表情符号
+                .replace(/[\u{1F300}-\u{1F5FF}]/gu, '') // 符号和象形文字
+                .replace(/[\u{1F680}-\u{1F6FF}]/gu, '') // 交通和地图符号
+                .replace(/[\u{1F700}-\u{1F77F}]/gu, '') // 炼金术符号
+                .replace(/[\u{1F780}-\u{1F7FF}]/gu, '') // 几何形状扩展
+                .replace(/[\u{1F800}-\u{1F8FF}]/gu, '') // 补充箭头-C
+                .replace(/[\u{1F900}-\u{1F9FF}]/gu, '') // 补充符号和象形文字
+                .replace(/[\u{1FA00}-\u{1FA6F}]/gu, '') // 扩展-A
+                .replace(/[\u{1FA70}-\u{1FAFF}]/gu, '') // 符号和象形文字扩展-A
+                .replace(/[\u{2600}-\u{26FF}]/gu, '')   // 杂项符号
+                .replace(/[\u{2700}-\u{27BF}]/gu, '')   // 装饰符号
+                .replace(/[\u{FE00}-\u{FE0F}]/gu, '')   // 变体选择器
+                .replace(/[\u{1F1E0}-\u{1F1FF}]/gu, '') // 旗帜
+                // 特殊符号替换为逗号（产生明显停顿）
+                .replace(/[*#\-_~`\[\]{}()（）【】《》<>@$%^&+=|\\\/'"\"]/g, '，')
+                // 句末标点统一为句号（产生长停顿）
+                .replace(/[。！？.!?]/g, '。')
+                // 其他标点统一为逗号（产生短停顿）
+                .replace(/[，、；：,.;:]/g, '，')
+                // 合并多个逗号
+                .replace(/，+/g, '，')
+                // 合并多个句号
+                .replace(/。+/g, '。')
+                // 移除多余空格
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        // 语音播报（使用原生 AVSpeechSynthesizer）
+        let _speakSafety = null;
+        function speak(text) {
+            // 通话模式始终显示AI字幕（不管语音开关）
+            if (callMode) showCallSubtitle(text, 'ai');
+            // 通话模式下强制启用语音，否则检查开关
+            if (!callMode && !voiceEnabled) return;
+            // 立即标记为正在说话，避免 startListening 的竞态条件
+            speaking = true;
+            // 安全计时器：如果 TTS 回调未触发，最多 30 秒后自动重置
+            if (_speakSafety) clearTimeout(_speakSafety);
+            _speakSafety = setTimeout(() => {
+                if (speaking) {
+                    speaking = false;
+                    if (callMode && !listening && !processing) {
+                        startCallModeRecognition();
+                    }
+                }
+            }, 30000);
+            // 清理符号
+            const cleanText = cleanTextForSpeech(text);
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeSpeak) {
+                window.webkit.messageHandlers.nativeSpeak.postMessage({ text: cleanText, rate: 0.52, pitch: 1.1 });
+            } else if (window.speechSynthesis) {
+                // 浏览器回退
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(cleanText);
+                u.lang = 'zh-CN';
+                u.rate = 0.9;
+                u.pitch = 1.1;
+                u.onend = () => { speaking = false; window.nativeTTSEnded(); };
+                window.speechSynthesis.speak(u);
+            } else {
+                speaking = false; // 没有可用的TTS
+            }
+        }
+
+        function stopSpeak() {
+            speaking = false;
+            _clearStreamQueue(); // 清除流式逐句播报队列
+            _streamTTSActive = false;
+            if (_speakSafety) { clearTimeout(_speakSafety); _speakSafety = null; }
+            // 停止AI字幕打字动画
+            if (_subtitleTimer) { clearInterval(_subtitleTimer); _subtitleTimer = null; }
+            // 停止音量监听
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.stopLevelMonitor) {
+                window.webkit.messageHandlers.stopLevelMonitor.postMessage({});
+            }
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.stopSpeak) {
+                window.webkit.messageHandlers.stopSpeak.postMessage({});
+            } else if (window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+            }
+        }
+
+        // 云端TTS错误回调
+        window.nativeCloudTTSError = function(error) {
+            console.warn('[CloudTTS]', error);
+            // 在设置面板状态上提示
+            const st = $('minimaxKeyStatus');
+            if (st) {
+                st.className = 'setting-status no';
+                st.textContent = error;
+            }
+            // 聊天区域也显示一次提示（不重复）
+            if (!window._cloudTTSErrorShown) {
+                window._cloudTTSErrorShown = true;
+                addMessage('⚠️ ' + error, false);
+                // 30秒后重置，允许再次提示
+                setTimeout(() => { window._cloudTTSErrorShown = false; }, 30000);
+            }
+        };
+
+        // 原生 TTS 回调
+        window.nativeTTSStarted = function() {
+            speaking = true;
+
+            // AI 说话时停止语音识别
+            if (listening) {
+                console.log('[TTS] AI 开始说话，停止语音识别');
+                stopListening();
+            }
+
+            if (callMode) {
+                $('aiStatus').textContent = '小美正在说...';
+                updateCallOverlayStatus('小美正在说...');
+                // 不启动音量监听，AI 说话时不检测用户打断
+            }
+        };
+
+        window.nativeTTSEnded = function() {
+            // 逐句播报模式：播完一句，继续下一句（不停止音量监听，保持打断检测）
+            if (_streamSentenceQueue.length > 0) {
+                _speakNextStream();
+                return;
+            }
+
+            // 队列暂时为空，但 SSE 可能还在发送 → 立即检查
+            if (_streamTTSActive) {
+                // 立即检查是否有新句子（无延迟）
+                if (_streamSentenceQueue.length > 0) {
+                    _speakNextStream();
+                } else {
+                    // 真的没有更多了，结束流式播报
+                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.stopLevelMonitor) {
+                        window.webkit.messageHandlers.stopLevelMonitor.postMessage({});
+                    }
+                    _streamTTSActive = false;
+                    speaking = false;
+                    if (_speakSafety) { clearTimeout(_speakSafety); _speakSafety = null; }
+                    if (callMode && !listening && !processing && !callMuted) {
+                        setTimeout(() => {
+                            if (callMode && !listening && !processing && !speaking) {
+                                startCallModeRecognition();
+                            }
+                        }, 500);
+                    }
+                }
+                return;
+            }
+
+            // 非流式：停止音量监听
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.stopLevelMonitor) {
+                window.webkit.messageHandlers.stopLevelMonitor.postMessage({});
+            }
+            _streamTTSActive = false;
+            speaking = false;
+            if (_speakSafety) { clearTimeout(_speakSafety); _speakSafety = null; }
+            if (callMode) {
+                const statusText = listening ? '正在听你说...' : '通话中...';
+                $('aiStatus').textContent = statusText;
+                updateCallOverlayStatus(statusText);
+                // TTS结束后确保识别在运行
+                if (!listening && !processing && !callMuted) {
+                    setTimeout(() => {
+                        if (callMode && !listening && !processing && !speaking) {
+                            startCallModeRecognition();
+                        }
+                    }, 500);
+                }
+            }
+        };
+
+        // 用户语音打断：TTS播放期间检测到用户说话
+        window.nativeUserInterrupt = function() {
+            if (!callMode) return;
+            // 停止TTS（Swift已停止，JS侧同步状态）
+            stopSpeak();
+            // 中断 Gemini Live 音频流
+            interruptGeminiLive();
+            if (callMode) {
+                showCallSubtitle('', 'user'); // 清除字幕
+                updateCallOverlayStatus('正在听你说...');
+                $('aiStatus').textContent = '正在听你说...';
+            }
+            // 短暂延迟后开始识别，等音频会话稳定
+            setTimeout(() => {
+                if (callMode && !listening && !processing && !speaking) {
+                    startCallModeRecognition();
+                }
+            }, 300);
+        };
+
+        // 语音列表回调
+        let availableVoices = [];
+        window.nativeVoicesList = function(jsonStr) {
+            try {
+                availableVoices = JSON.parse(jsonStr);
+                renderVoiceOptions();
+            } catch(e) {}
+        };
+
+        // 添加消息
+        function addMessage(text, isUser = false) {
+            const div = document.createElement('div');
+            div.className = `message ${isUser ? 'msg-user' : 'msg-ai'}`;
+            div.textContent = text;
+            $('chat').appendChild(div);
+            $('chat').scrollTop = $('chat').scrollHeight;
+        }
+
+        // 显示加载
+        function showTyping() {
+            const div = document.createElement('div');
+            div.id = 'typing';
+            div.className = 'message msg-ai';
+            div.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+            $('chat').appendChild(div);
+            $('chat').scrollTop = $('chat').scrollHeight;
+        }
+
+        function hideTyping() {
+            const t = $('typing');
+            if (t) t.remove();
+        }
+
+        // 智能回复 - 全部通过 DeepSeek AI
+        // 检测是否需要拍照分析的关键词
+        function needsImageAnalysis(text) {
+            const keywords = ['分析', '皮肤', '肤质', '肤色', '看看', '痘', '毛孔', '黑眼圈',
+                '气色', '脸', '面部', '素颜', '卸妆', '妆容', '适合', '推荐',
+                '口红', '眼影', '粉底', '色号', '肤况', '状态', '照片', '拍'];
+            const input = text.toLowerCase();
+            return keywords.some(k => input.includes(k));
+        }
+
+        // =====================================================
+        // 任务清单系统
+        // =====================================================
+        let currentTasks = []; // [{name, desc, done}]
+        let taskCardId = null; // 当前任务卡片的 DOM id
+
+        // 解析 AI 回复中的 [CHECKLIST]...[/CHECKLIST]
+        function parseChecklist(text) {
+            const match = text.match(/\[CHECKLIST\]([\s\S]*?)\[\/CHECKLIST\]/);
+            if (!match) return null;
+            const lines = match[1].trim().split('\n').filter(l => l.trim());
+            return lines.map(line => {
+                const parts = line.trim().split('|');
+                return { name: parts[0].trim(), desc: parts[1] ? parts[1].trim() : '', done: false };
+            });
+        }
+
+        // 解析 [DONE:n] 标记
+        function parseDoneMarkers(text) {
+            const markers = [];
+            const regex = /\[DONE:(\d+)\]/g;
+            let m;
+            while ((m = regex.exec(text)) !== null) {
+                markers.push(parseInt(m[1]));
+            }
+            return markers;
+        }
+
+        // 检测 [ALLDONE]
+        function parseAllDone(text) {
+            return text.includes('[ALLDONE]');
+        }
+
+        // 清除回复中的标记
+        function cleanReplyText(text) {
+            return text
+                .replace(/\[CHECKLIST\][\s\S]*?\[\/CHECKLIST\]/g, '')
+                .replace(/\[DONE:\d+\]/g, '')
+                .replace(/\[ALLDONE\]/g, '')
+                .trim();
+        }
+
+        // 渲染任务卡片
+        function renderTaskCard() {
+            if (!currentTasks.length) return;
+
+            const doneCount = currentTasks.filter(t => t.done).length;
+            const total = currentTasks.length;
+            const allDone = doneCount === total;
+            const percent = Math.round((doneCount / total) * 100);
+
+            // 找到当前进行中的步骤
+            const activeIdx = currentTasks.findIndex(t => !t.done);
+
+            let html = '<div class="task-card-header">';
+            html += '<div class="task-card-title">美妆任务清单</div>';
+            html += '<div class="task-progress">' + doneCount + '/' + total + '</div>';
+            html += '</div>';
+            html += '<div class="task-progress-bar"><div class="task-progress-fill" style="width:' + percent + '%"></div></div>';
+
+            currentTasks.forEach((task, i) => {
+                const stepNum = i + 1;
+                const isDone = task.done;
+                const isActive = (i === activeIdx);
+                html += '<div class="task-item">';
+                html += '<div class="task-check ' + (isDone ? 'done' : (isActive ? 'active' : '')) + '"></div>';
+                html += '<div class="task-info">';
+                html += '<div class="task-name ' + (isDone ? 'done' : '') + '">';
+                html += '<span class="task-step-num ' + (isDone ? 'done' : '') + '">' + stepNum + '.</span>';
+                html += task.name + '</div>';
+                if (task.desc) html += '<div class="task-desc">' + task.desc + '</div>';
+                html += '</div>';
+                if (isActive && !isDone) {
+                    html += '<button class="task-done-btn" onclick="markStepDone(' + i + ')">完成</button>';
+                }
+                html += '</div>';
+            });
+
+            if (allDone) {
+                html += '<div class="task-complete-banner">&#127881; \u5168\u90e8\u5b8c\u6210\uff01\u4f60\u592a\u68d2\u4e86\uff01</div>';
+            }
+
+            // 如果卡片已存在，更新内容；否则创建新卡片
+            if (taskCardId && document.getElementById(taskCardId)) {
+                document.getElementById(taskCardId).innerHTML = html;
+            } else {
+                taskCardId = 'task-' + Date.now();
+                const div = document.createElement('div');
+                div.id = taskCardId;
+                div.className = 'task-card';
+                div.innerHTML = html;
+                $('chat').appendChild(div);
+                $('chat').scrollTop = $('chat').scrollHeight;
+            }
+
+            // 同步任务卡片到通话界面
+            const callTaskCont = $('callTaskContainer');
+            if (callTaskCont) {
+                callTaskCont.innerHTML = '<div class="task-card">' + html + '</div>';
+            }
+        }
+
+        // 处理 AI 回复中的任务相关标记
+        function processTaskMarkers(reply) {
+            // 1. 检查是否有新的任务清单
+            const checklist = parseChecklist(reply);
+            if (checklist) {
+                currentTasks = checklist;
+                taskCardId = null; // 重新创建卡片
+                renderTaskCard();
+                // 清除流式播报队列和缓冲，避免冲突
+                _clearStreamQueue();
+                _streamSentenceBuffer = '';
+                let stepsMsg = '好的，一共' + checklist.length + '个步骤。';
+                checklist.forEach((step, i) => {
+                    stepsMsg += '第' + (i + 1) + '步：' + step.name;
+                    if (step.desc) stepsMsg += '，' + step.desc;
+                    stepsMsg += '。';
+                });
+                stepsMsg += '现在开始第一步吧~';
+                speak(stepsMsg);
+                _streamingSpoke = true; // 防止 handleInput 再次 speak
+                // 启动AI视觉检测
+                startTaskDetection();
+            }
+
+            // 2. 检查完成标记
+            const doneMarkers = parseDoneMarkers(reply);
+            if (doneMarkers.length > 0 && currentTasks.length > 0) {
+                doneMarkers.forEach(num => {
+                    if (num >= 1 && num <= currentTasks.length) {
+                        currentTasks[num - 1].done = true;
+                    }
+                });
+                renderTaskCard();
+                if (currentTasks.every(t => t.done)) stopTaskDetection();
+            }
+
+            // 3. 检查全部完成
+            if (parseAllDone(reply) && currentTasks.length > 0) {
+                currentTasks.forEach(t => t.done = true);
+                renderTaskCard();
+                stopTaskDetection();
+            }
+
+            // 返回清理后的文本
+            return cleanReplyText(reply);
+        }
+
+        // 获取当前任务状态文本（注入 AI 上下文用）
+        function getTaskContextText() {
+            if (!currentTasks.length) return '';
+            const doneCount = currentTasks.filter(t => t.done).length;
+            if (doneCount === currentTasks.length) return '';
+
+            const activeStep = currentTasks.findIndex(t => !t.done);
+            let ctx = '\n\n[当前任务进度]：\n';
+            currentTasks.forEach((t, i) => {
+                ctx += (i + 1) + '. ' + t.name + (t.done ? '（已完成）' : '（未完成）') + '\n';
+            });
+            if (activeStep >= 0) {
+                ctx += '当前正在进行：第' + (activeStep + 1) + '步「' + currentTasks[activeStep].name + '」\n';
+                ctx += '【系统提示】请直接讲解这一步的操作方法和技巧，不要问用户是否完成，系统会自动检测。\n';
+            }
+            return ctx;
+        }
+
+        // =====================================================
+        // 任务步骤完成（AI视觉检测 + 语音关键词 + 按钮三通道）
+        // =====================================================
+
+        let taskDetectionTimer = null;
+        let isDetecting = false;
+        let consecutiveYesCount = 0;
+        const REQUIRED_YES_COUNT = 3; // 连续3次确认才算完成
+
+        // 根据任务名判断检测区域类型
+        // 返回: 'lip' | 'eyebrow' | 'eye' | 'cheek' | 'face' | 'general'
+        function getTaskDetectionType(taskName) {
+            if (!taskName) return 'face';
+            const n = taskName.toLowerCase();
+            if (n.includes('口红') || n.includes('唇') || n.includes('唇膏') || n.includes('唇彩') || n.includes('唇釉')) return 'lip';
+            if (n.includes('眉') || n.includes('画眉') || n.includes('眉笔') || n.includes('眉粉')) return 'eyebrow';
+            if (n.includes('眼影') || n.includes('眼妆') || n.includes('眼线') || n.includes('睫毛')) return 'eye';
+            if (n.includes('腮红') || n.includes('脸颊') || n.includes('修容') || n.includes('高光')) return 'cheek';
+            if (n.includes('粉底') || n.includes('底妆') || n.includes('遮瑕') || n.includes('隔离') || n.includes('防晒') || n.includes('洁面') || n.includes('洗脸') || n.includes('卸妆') || n.includes('面霜') || n.includes('护肤')) return 'face';
+            return 'face'; // 默认检测整脸
+        }
+
+        // 检测区域的中文标签
+        function getDetectionLabel(type) {
+            const labels = { lip: '嘴唇', eyebrow: '眉毛', eye: '眼部', cheek: '脸颊', face: '面部' };
+            return labels[type] || '检测区域';
+        }
+
+        // 判断用户语音是否表示完成当前步骤
+        function isCompletionPhrase(text) {
+            const keywords = ['完成', '好了', '做好了', '弄好了', '涂好了', '画好了',
+                '洗好了', '抹好了', '搞定', '可以了', '下一步', 'ok', 'OK',
+                '好啦', '完啦', '完了', '做完了', '涂完了', '画完了', '洗完了',
+                '弄完了', '结束', '搞好了', '行了', '好的下一步', '继续'];
+            const input = text.toLowerCase();
+            return keywords.some(k => input.includes(k));
+        }
+
+        // 判断用户是否在请求教程/步骤指导（需要生成任务清单）
+        function isTutorialRequest(text) {
+            const keywords = ['教我', '怎么化', '怎么画', '怎么涂', '怎么护肤', '怎么卸妆',
+                '化妆步骤', '护肤步骤', '教程', '步骤', '日常妆', '淡妆', '浓妆',
+                '约会妆', '职场妆', '妆容', '全妆', '底妆', '眼妆',
+                '教一下', '教教我', '指导', '学化妆', '学护肤'];
+            return keywords.some(k => text.includes(k));
+        }
+
+        // 标记当前步骤完成
+        function markStepDone(stepIndex) {
+            if (stepIndex < 0 || stepIndex >= currentTasks.length) return;
+            if (currentTasks[stepIndex].done) return;
+
+            currentTasks[stepIndex].done = true;
+            consecutiveYesCount = 0;
+            renderTaskCard();
+
+            const stepName = currentTasks[stepIndex].name;
+
+            if (currentTasks.every(t => t.done)) {
+                stopTaskDetection();
+                const allDoneMsg = '「' + stepName + '」完成！所有步骤都完成啦，你太厉害了~';
+                addMessage(allDoneMsg);
+                speak(allDoneMsg);
+                if (callMode) updateCallOverlayStatus('全部完成！');
+            } else {
+                // 播报完成并告知下一步
+                const nextStep = currentTasks.findIndex(t => !t.done);
+                const nextName = currentTasks[nextStep].name;
+                const nextDesc = currentTasks[nextStep].desc;
+                let msg = '「' + stepName + '」完成~ 很棒！下一步，第' + (nextStep + 1) + '步：' + nextName;
+                if (nextDesc) msg += '，' + nextDesc;
+                msg += '。';
+                addMessage(msg);
+                speak(msg);
+                if (callMode) updateCallOverlayStatus('下一步：' + nextName);
+            }
+        }
+
+        // 启动AI视觉检测
+        function startTaskDetection() {
+            stopTaskDetection();
+            consecutiveYesCount = 0;
+
+            if (nativeFaceAvailable) {
+                // 最优先：Apple Vision 原生人脸检测（离线、高精度）
+                fmInitializing = true;
+                fmInitialLipColor = null;
+                fmColorSamples = [];
+                fmColorHistory = [];
+                fmMovementHistory = [];
+                fmCompletionCount = 0;
+                startNativeFaceDetection();
+                $('aiStatus').textContent = '原生AI检测已启动';
+                // AI 视觉检测作为备用（低频率）
+                taskDetectionTimer = setInterval(() => {
+                    autoDetectTaskCompletion();
+                }, 30000);
+            } else if (faceMeshReady) {
+                // 优先使用 Face Mesh 实时检测（参考 test8.html）
+                fmInitializing = true;
+                fmInitialLipColor = null;
+                fmColorSamples = [];
+                fmColorHistory = [];
+                fmMovementHistory = [];
+                fmCompletionCount = 0;
+                startFaceMeshLoop();
+                $('aiStatus').textContent = 'AI实时检测已启动';
+                // 同时以低频率运行 AI 视觉检测作为备用
+                taskDetectionTimer = setInterval(() => {
+                    autoDetectTaskCompletion();
+                }, 30000);
+            } else {
+                // Face Mesh 不可用，回退到纯 AI 视觉检测
+                $('aiStatus').textContent = 'AI视觉检测已启动';
+                taskDetectionTimer = setInterval(() => {
+                    autoDetectTaskCompletion();
+                }, 15000);
+            }
+        }
+
+        // 停止AI视觉检测
+        function stopTaskDetection() {
+            if (taskDetectionTimer) {
+                clearInterval(taskDetectionTimer);
+                taskDetectionTimer = null;
+            }
+            stopNativeFaceDetection();
+            stopFaceMeshLoop();
+            isDetecting = false;
+            consecutiveYesCount = 0;
+            fmInitializing = false;
+            fmInitialLipColor = null;
+            fmCompletionCount = 0;
+            $('aiStatus').textContent = callMode ? '通话中...' : '准备就绪';
+        }
+
+        // AI视觉自动检测当前步骤
+        async function autoDetectTaskCompletion() {
+            if (isDetecting || processing) return;
+            if (!currentTasks.length) { stopTaskDetection(); return; }
+            const activeStep = currentTasks.findIndex(t => !t.done);
+            if (activeStep < 0) { stopTaskDetection(); return; }
+
+            const frameImg = captureFrame(true);
+            if (!frameImg || !visionConsentGranted) return;
+
+            isDetecting = true;
+            const stepName = currentTasks[activeStep].name;
+
+            // 新策略：让AI先描述看到什么，再判断
+            // 不对比前后照，只看当前状态，降低误判
+            const promptText = '仔细观察这张照片中的人脸。\n\n' +
+                '当前美妆步骤是「' + stepName + '」。\n\n' +
+                '请你严格判断：这个人的脸上是否已经明显完成了「' + stepName + '」？\n\n' +
+                '判断规则（必须严格遵守）：\n' +
+                '- 如果是"洁面"类步骤：脸上看起来干净无妆，回答COMPLETE\n' +
+                '- 如果是"涂口红/唇膏"：嘴唇必须有明显的口红颜色（红色/粉色等），回答COMPLETE\n' +
+                '- 如果是"画眉"：眉毛必须看起来被描画过，形状分明，回答COMPLETE\n' +
+                '- 如果是"涂粉底/底妆"：肤色必须看起来均匀无瑕，回答COMPLETE\n' +
+                '- 如果是"眼影/眼妆"：眼皮上必须有明显彩妆颜色，回答COMPLETE\n' +
+                '- 如果是"腮红"：脸颊必须有明显红润色彩，回答COMPLETE\n' +
+                '- 如果看不到对应变化，或者不确定，回答INCOMPLETE\n\n' +
+                '注意：宁可判断为INCOMPLETE也不要误判为COMPLETE！\n' +
+                '只回答COMPLETE或INCOMPLETE。';
+
+            const judgeMessages = [
+                { role: 'user', content: promptText }
+            ];
+
+            try {
+                // 用低温度(0.1)让模型更严谨
+                const result = await callNativeAI(judgeMessages, [frameImg], 0.1);
+                const answer = result.trim().toUpperCase();
+
+                if (answer.includes('COMPLETE') && !answer.includes('INCOMPLETE')) {
+                    consecutiveYesCount++;
+                    $('aiStatus').textContent = 'AI检测中(' + consecutiveYesCount + '/' + REQUIRED_YES_COUNT + ')';
+                    if (consecutiveYesCount >= REQUIRED_YES_COUNT) {
+                        markStepDone(activeStep);
+                    }
+                } else {
+                    consecutiveYesCount = 0;
+                    $('aiStatus').textContent = 'AI视觉检测中...';
+                }
+            } catch(e) {
+                // 检测失败静默跳过
+            } finally {
+                isDetecting = false;
+            }
+        }
+
+        // =====================================================
+        // Apple Vision 原生人脸检测（优先）
+        // 通过 Swift 桥接调用 Vision Framework 的 VNDetectFaceLandmarksRequest
+        // 获取嘴唇、眉毛等面部特征点，用于化妆检测
+        // =====================================================
+        let nativeFaceAvailable = !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.detectFace);
+        let nativeFaceTimer = null;
+        let nativeFaceProcessing = false;
+
+        function startNativeFaceDetection() {
+            if (nativeFaceTimer || !nativeFaceAvailable) return;
+            nativeFaceTimer = setInterval(() => {
+                if (nativeFaceProcessing) return;
+                const img = captureFrame(false); // 320x240 low-res for speed
+                if (!img) return;
+                nativeFaceProcessing = true;
+                window.webkit.messageHandlers.detectFace.postMessage({image: img});
+                // Safety: reset processing flag after 2s in case callback never fires
+                setTimeout(() => { nativeFaceProcessing = false; }, 2000);
+            }, 200); // ~5fps
+        }
+
+        function stopNativeFaceDetection() {
+            if (nativeFaceTimer) {
+                clearInterval(nativeFaceTimer);
+                nativeFaceTimer = null;
+            }
+            nativeFaceProcessing = false;
+        }
+
+        // Swift 回调：接收原生人脸特征点
+        window.nativeFaceLandmarks = function(data) {
+            nativeFaceProcessing = false;
+            if (!data) return;
+            // 至少需要嘴唇数据或脸框数据
+            if (!data.lipTop && !data.faceBox) return;
+
+            // 清除旧画面，更新 canvas 尺寸
+            if (fmCtx && fmCanvas) {
+                const container = fmCanvas.parentElement;
+                if (container) {
+                    fmCanvas.width = container.clientWidth;
+                    fmCanvas.height = container.clientHeight;
+                }
+                fmCtx.clearRect(0, 0, fmCanvas.width, fmCanvas.height);
+            }
+            // 同时清除通话界面 canvas
+            if (callMode) {
+                const callCanvas = $('callFaceCanvas');
+                if (callCanvas) {
+                    const cCtx = callCanvas.getContext('2d');
+                    cCtx.clearRect(0, 0, callCanvas.width, callCanvas.height);
+                }
+            }
+
+            // 构建兼容 MediaPipe 格式的 landmarks 数组
+            const landmarks = [];
+            if (data.lipTop) landmarks[13] = data.lipTop;       // 上唇中心
+            if (data.lipBottom) landmarks[14] = data.lipBottom;  // 下唇中心
+            if (data.lipLeft) landmarks[61] = data.lipLeft;      // 左嘴角
+            if (data.lipRight) landmarks[291] = data.lipRight;   // 右嘴角
+            // 保存额外的原生检测数据（眉毛、脸框）
+            landmarks._native = data;
+
+            // 根据当前任务类型画对应检测区域框
+            if (currentTasks.length > 0 && (fmInitializing || fmInitialLipColor)) {
+                drawDetectionRegion(landmarks);
+            }
+
+            // 进行化妆检测
+            if (currentTasks.length > 0 && (fmInitializing || fmInitialLipColor)) {
+                detectWithFaceMesh(landmarks);
+            }
+
+            fmPrevLandmarks = landmarks;
+        };
+
+        // =====================================================
+        // 人脸网格检测（MediaPipe Face Mesh，参考 test8.html）
+        // 实时468点人脸地标 → 精确定位嘴唇区域 → 颜色采样
+        // 检测手部运动 + 颜色变化 → 自动判断化妆步骤完成
+        // =====================================================
+        let faceMesh = null;
+        let faceMeshReady = false;
+        let fmCanvas = null;
+        let fmCtx = null;
+        let fmPrevLandmarks = null;
+        let fmInitialLipColor = null;
+        let fmColorSamples = [];
+        let fmColorHistory = [];
+        let fmMovementHistory = [];
+        let fmCompletionCount = 0;
+        let fmProcessing = false;
+        let fmDetectionTimer = null;
+        let fmInitializing = false;
+
+        async function initFaceMesh() {
+            // Apple Vision 原生检测可用时，跳过 MediaPipe 加载
+            if (nativeFaceAvailable) {
+                // 仍需初始化 canvas 用于画检测区域框
+                fmCanvas = $('faceCanvas');
+                if (fmCanvas) {
+                    fmCtx = fmCanvas.getContext('2d');
+                }
+                $('aiStatus').textContent = '原生人脸检测就绪';
+                return true;
+            }
+
+            if (typeof FaceMesh === 'undefined') {
+                // 脚本还没加载完，等一下再试
+                setTimeout(() => {
+                    if (typeof FaceMesh !== 'undefined') {
+                        initFaceMesh();
+                    }
+                }, 2000);
+                return false;
+            }
+
+            try {
+                $('aiStatus').textContent = '加载人脸检测...';
+
+                faceMesh = new FaceMesh({
+                    locateFile: (file) => {
+                        return 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/' + file;
+                    }
+                });
+
+                faceMesh.setOptions({
+                    maxNumFaces: 1,
+                    refineLandmarks: true,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+
+                faceMesh.onResults(onFaceMeshResults);
+
+                fmCanvas = $('faceCanvas');
+                if (fmCanvas) {
+                    fmCtx = fmCanvas.getContext('2d');
+                }
+
+                // 预热：发送一帧让模型完成加载
+                const video = $('camera');
+                if (video && video.readyState >= 2) {
+                    await faceMesh.send({image: video});
+                }
+
+                faceMeshReady = true;
+                $('aiStatus').textContent = '人脸检测就绪';
+                return true;
+            } catch (e) {
+                $('aiStatus').textContent = '准备就绪';
+                return false;
+            }
+        }
+
+        function startFaceMeshLoop() {
+            if (fmDetectionTimer || !faceMeshReady) return;
+
+            fmDetectionTimer = setInterval(async () => {
+                if (fmProcessing || !faceMeshReady) return;
+                const video = $('camera');
+                if (!video || video.readyState < 2) return;
+
+                fmProcessing = true;
+                try {
+                    await faceMesh.send({image: video});
+                } catch (e) {}
+                fmProcessing = false;
+            }, 200); // ~5fps，平衡性能和响应速度
+        }
+
+        function stopFaceMeshLoop() {
+            if (fmDetectionTimer) {
+                clearInterval(fmDetectionTimer);
+                fmDetectionTimer = null;
+            }
+            fmProcessing = false;
+            // 清除 canvas
+            if (fmCtx && fmCanvas) {
+                fmCtx.clearRect(0, 0, fmCanvas.width, fmCanvas.height);
+            }
+            // 清除通话界面 canvas
+            const callCanvas = $('callFaceCanvas');
+            if (callCanvas) {
+                const cCtx = callCanvas.getContext('2d');
+                cCtx.clearRect(0, 0, callCanvas.width, callCanvas.height);
+            }
+        }
+
+        function onFaceMeshResults(results) {
+            // 更新 canvas 尺寸
+            if (fmCtx && fmCanvas) {
+                const container = fmCanvas.parentElement;
+                if (container) {
+                    fmCanvas.width = container.clientWidth;
+                    fmCanvas.height = container.clientHeight;
+                }
+                fmCtx.clearRect(0, 0, fmCanvas.width, fmCanvas.height);
+            }
+
+            if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
+                fmPrevLandmarks = null;
+                return;
+            }
+
+            const landmarks = results.multiFaceLandmarks[0];
+
+            // 画检测区域框（只在有任务检测时显示）
+            if (currentTasks.length > 0 && (fmInitializing || fmInitialLipColor)) {
+                drawDetectionRegion(landmarks);
+            }
+
+            // 进行化妆检测
+            if (currentTasks.length > 0 && (fmInitializing || fmInitialLipColor)) {
+                detectWithFaceMesh(landmarks);
+            }
+
+            fmPrevLandmarks = landmarks;
+        }
+
+        // 根据任务类型获取检测区域坐标（归一化坐标）
+        function getDetectionBounds(landmarks) {
+            const activeStep = currentTasks.findIndex(t => !t.done);
+            if (activeStep < 0) return null;
+            const taskType = getTaskDetectionType(currentTasks[activeStep].name);
+            const native = landmarks._native;
+
+            if (taskType === 'lip') {
+                const lipTop = landmarks[13], lipBottom = landmarks[14];
+                const lipLeft = landmarks[61], lipRight = landmarks[291];
+                if (!lipTop || !lipBottom || !lipLeft || !lipRight) return null;
+                return { x1: lipLeft.x, y1: lipTop.y, x2: lipRight.x, y2: lipBottom.y, type: 'lip' };
+            }
+            if (taskType === 'eyebrow' && native) {
+                const lb = native.leftEyebrow, rb = native.rightEyebrow;
+                if (lb && rb) {
+                    return { x1: Math.min(lb.x, rb.x), y1: Math.min(lb.y, rb.y), x2: Math.max(lb.x + lb.w, rb.x + rb.w), y2: Math.max(lb.y + lb.h, rb.y + rb.h), type: 'eyebrow' };
+                }
+            }
+            if (taskType === 'eye' && native) {
+                // 眼部区域：用眉毛下方到嘴唇上方，脸框左右范围
+                const lb = native.leftEyebrow, rb = native.rightEyebrow, fb = native.faceBox;
+                if (lb && rb && fb) {
+                    return { x1: fb.x + fb.w * 0.1, y1: Math.min(lb.y, rb.y), x2: fb.x + fb.w * 0.9, y2: Math.max(lb.y + lb.h, rb.y + rb.h) + 0.06, type: 'eye' };
+                }
+            }
+            if (taskType === 'cheek' && native && native.faceBox) {
+                const fb = native.faceBox;
+                const lipTop = landmarks[13];
+                // 脸颊：脸框左右两侧，嘴唇上方到脸框中部
+                return { x1: fb.x + fb.w * 0.05, y1: fb.y + fb.h * 0.35, x2: fb.x + fb.w * 0.95, y2: lipTop ? lipTop.y : fb.y + fb.h * 0.75, type: 'cheek' };
+            }
+            // face / general：使用整个脸框
+            if (native && native.faceBox) {
+                const fb = native.faceBox;
+                return { x1: fb.x, y1: fb.y, x2: fb.x + fb.w, y2: fb.y + fb.h, type: 'face' };
+            }
+            // 回退到嘴唇区域
+            const lipTop = landmarks[13], lipBottom = landmarks[14];
+            const lipLeft = landmarks[61], lipRight = landmarks[291];
+            if (lipTop && lipBottom && lipLeft && lipRight) {
+                return { x1: lipLeft.x, y1: lipTop.y, x2: lipRight.x, y2: lipBottom.y, type: 'lip' };
+            }
+            return null;
+        }
+
+        // 画检测区域的虚线框（根据任务类型动态调整）
+        function drawDetectionRegion(landmarks) {
+            if (!fmCtx || !fmCanvas) return;
+
+            const bounds = getDetectionBounds(landmarks);
+            if (!bounds) return;
+
+            // 在主 canvas 上画
+            _drawRegionOnCtx(fmCtx, fmCanvas, bounds);
+
+            // 通话模式：同时在通话界面 canvas 上画
+            if (callMode) {
+                const callCanvas = $('callFaceCanvas');
+                if (callCanvas) {
+                    const callCtx = callCanvas.getContext('2d');
+                    const container = callCanvas.parentElement;
+                    if (container) {
+                        callCanvas.width = container.clientWidth;
+                        callCanvas.height = container.clientHeight;
+                    }
+                    callCtx.clearRect(0, 0, callCanvas.width, callCanvas.height);
+                    _drawRegionOnCtx(callCtx, callCanvas, bounds);
+                }
+            }
+        }
+
+        function _drawRegionOnCtx(ctx, canvas, bounds) {
+            const w = canvas.width;
+            const h = canvas.height;
+
+            const x1 = bounds.x1 * w;
+            const x2 = bounds.x2 * w;
+            const y1 = bounds.y1 * h;
+            const y2 = bounds.y2 * h;
+            const pad = 10;
+
+            ctx.save();
+            ctx.strokeStyle = 'rgba(249, 115, 22, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 4]);
+            ctx.strokeRect(x1 - pad, y1 - pad, (x2 - x1) + pad * 2, (y2 - y1) + pad * 2);
+            ctx.setLineDash([]);
+
+            // 标签
+            const label = getDetectionLabel(bounds.type);
+            ctx.fillStyle = 'rgba(249, 115, 22, 0.9)';
+            ctx.font = 'bold 11px -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(label, (x1 + x2) / 2, y1 - pad - 4);
+            ctx.restore();
+        }
+
+        // 从视频帧采样检测区域颜色（根据任务类型动态调整区域）
+        function sampleFmLipColor(landmarks) {
+            const video = $('camera');
+            if (!video || video.readyState < 2) return null;
+
+            const tc = document.createElement('canvas');
+            tc.width = video.videoWidth || 640;
+            tc.height = video.videoHeight || 480;
+            const tctx = tc.getContext('2d');
+            tctx.drawImage(video, 0, 0, tc.width, tc.height);
+            const imgData = tctx.getImageData(0, 0, tc.width, tc.height);
+
+            // 获取检测区域坐标
+            const bounds = getDetectionBounds(landmarks);
+            if (!bounds) return null;
+
+            const m = 0.015;
+            const x1 = Math.max(0, Math.floor((bounds.x1 - m) * tc.width));
+            const x2 = Math.min(tc.width, Math.floor((bounds.x2 + m) * tc.width));
+            const y1 = Math.max(0, Math.floor((bounds.y1 - m) * tc.height));
+            const y2 = Math.min(tc.height, Math.floor((bounds.y2 + m) * tc.height));
+
+            let r = 0, g = 0, b = 0, cnt = 0;
+            // 大区域用更大的采样步长
+            const step = (bounds.type === 'face' || bounds.type === 'cheek') ? 4 : 2;
+            for (let y = y1; y < y2; y += step) {
+                for (let x = x1; x < x2; x += step) {
+                    const idx = (y * tc.width + x) * 4;
+                    if (idx >= 0 && idx + 2 < imgData.data.length) {
+                        r += imgData.data[idx];
+                        g += imgData.data[idx + 1];
+                        b += imgData.data[idx + 2];
+                        cnt++;
+                    }
+                }
+            }
+
+            if (cnt === 0) return null;
+
+            const ar = r / cnt, ag = g / cnt, ab = b / cnt;
+            const mx = Math.max(ar, ag, ab), mn = Math.min(ar, ag, ab);
+            return {
+                r: ar, g: ag, b: ab,
+                saturation: mx === 0 ? 0 : ((mx - mn) / mx) * 100
+            };
+        }
+
+        // 检测区域颜色变化（根据任务类型使用不同阈值）
+        function fmDetectColorChange(cur, init) {
+            if (!cur || !init) return false;
+
+            const rDiff = cur.r - init.r;
+            const gDiff = cur.g - init.g;
+            const bDiff = cur.b - init.b;
+            const total = Math.abs(rDiff) + Math.abs(gDiff) + Math.abs(bDiff);
+            const satDiff = cur.saturation - init.saturation;
+
+            // 获取当前任务类型
+            const activeStep = currentTasks.findIndex(t => !t.done);
+            const taskType = activeStep >= 0 ? getTaskDetectionType(currentTasks[activeStep].name) : 'lip';
+
+            if (taskType === 'lip') {
+                // 口红检测：红/粉色系变化（阈值提高，避免光线误判）
+                if (rDiff > 20 && rDiff > Math.abs(gDiff) && rDiff > Math.abs(bDiff)) return true;
+                if (satDiff > 15) return true;
+                if (rDiff > 15 && satDiff > 8) return true;
+                if (total > 40) return true;
+                if (init.saturation < 25 && satDiff > 8 && rDiff > 15) return true;
+            } else if (taskType === 'eyebrow') {
+                // 画眉：颜色变深（亮度降低）
+                const briDiff = (rDiff + gDiff + bDiff) / 3;
+                if (briDiff < -15) return true;
+                if (total > 35) return true;
+            } else if (taskType === 'eye') {
+                // 眼影/眼妆：颜色变化明显
+                if (total > 30) return true;
+                if (Math.abs(satDiff) > 12) return true;
+            } else if (taskType === 'cheek') {
+                // 腮红：红色通道增加 + 饱和度增加
+                if (rDiff > 12 && satDiff > 6) return true;
+                if (total > 30) return true;
+            } else {
+                // face / general：整体色调变化（粉底使肤色均匀）
+                if (total > 25) return true;
+                if (Math.abs(satDiff) > 10) return true;
+                // 肤色均匀度提升（方差减小 → 用总变化替代）
+                const briDiff = (rDiff + gDiff + bDiff) / 3;
+                if (Math.abs(briDiff) > 15) return true;
+            }
+
+            return false;
+        }
+
+        // 检测面部附近的运动（手在涂抹）
+        function fmDetectMovement(lm, prev) {
+            if (!prev) return false;
+            // 用嘴唇关键点作为运动参考（适用于所有任务类型，因为手遮脸时会影响这些点）
+            const pts = [13, 14, 61, 291];
+            let mc = 0;
+            for (const i of pts) {
+                if (lm[i] && prev[i] && (Math.abs(lm[i].x - prev[i].x) > 0.02 || Math.abs(lm[i].y - prev[i].y) > 0.02)) mc++;
+            }
+            return mc >= 2;
+        }
+
+        // Face Mesh 实时化妆检测
+        function detectWithFaceMesh(landmarks) {
+            const activeStep = currentTasks.findIndex(t => !t.done);
+            if (activeStep < 0) return;
+
+            const color = sampleFmLipColor(landmarks);
+            if (!color) return;
+
+            // 阶段一：收集初始颜色（5帧取平均）
+            if (fmInitializing) {
+                fmColorSamples.push(color);
+                $('aiStatus').textContent = '采集基准颜色(' + fmColorSamples.length + '/8)...';
+                if (callMode) updateCallOverlayStatus('采集基准颜色(' + fmColorSamples.length + '/8)...');
+                if (fmColorSamples.length >= 8) {
+                    fmInitialLipColor = {
+                        r: fmColorSamples.reduce((s, c) => s + c.r, 0) / fmColorSamples.length,
+                        g: fmColorSamples.reduce((s, c) => s + c.g, 0) / fmColorSamples.length,
+                        b: fmColorSamples.reduce((s, c) => s + c.b, 0) / fmColorSamples.length,
+                        saturation: fmColorSamples.reduce((s, c) => s + c.saturation, 0) / fmColorSamples.length
+                    };
+                    fmInitializing = false;
+                    fmColorSamples = [];
+                    $('aiStatus').textContent = 'AI实时检测中...';
+                    if (callMode) {
+                        const _stepName = currentTasks[activeStep] ? currentTasks[activeStep].name : '';
+                        updateCallOverlayStatus(_stepName ? '准备检测「' + _stepName + '」...' : 'AI实时检测中...');
+                    }
+                }
+                return;
+            }
+
+            if (!fmInitialLipColor) return;
+
+            // 阶段二：持续检测颜色变化 + 手部运动
+            const hasMovement = fmDetectMovement(landmarks, fmPrevLandmarks);
+            fmMovementHistory.push(hasMovement);
+            if (fmMovementHistory.length > 15) fmMovementHistory.shift();
+
+            fmColorHistory.push(color);
+            if (fmColorHistory.length > 10) fmColorHistory.shift();
+
+            // 平均最近5帧颜色（平滑处理减少误判）
+            const recent = fmColorHistory.slice(-5);
+            if (recent.length < 3) return;
+            const avgColor = {
+                r: recent.reduce((s, c) => s + c.r, 0) / recent.length,
+                g: recent.reduce((s, c) => s + c.g, 0) / recent.length,
+                b: recent.reduce((s, c) => s + c.b, 0) / recent.length,
+                saturation: recent.reduce((s, c) => s + c.saturation, 0) / recent.length
+            };
+
+            const changed = fmDetectColorChange(avgColor, fmInitialLipColor);
+            const noMovement = !fmMovementHistory.slice(-5).some(m => m);
+
+            if (changed && noMovement) {
+                fmCompletionCount++;
+                var pct = Math.min(Math.round(fmCompletionCount / 15 * 100), 100);
+                $('aiStatus').textContent = '检测到变化 ' + pct + '%';
+                if (callMode) {
+                    const _stepName = currentTasks[activeStep] ? currentTasks[activeStep].name : '';
+                    updateCallOverlayStatus(_stepName ? '「' + _stepName + '」完成度 ' + pct + '%' : '检测到变化 ' + pct + '%');
+                }
+
+                if (fmCompletionCount >= 15) {
+                    markStepDone(activeStep);
+                    resetFmForNextStep();
+                }
+            } else if (changed && hasMovement) {
+                // 正在涂抹中，显示进度
+                const _stepName = currentTasks[activeStep] ? currentTasks[activeStep].name : '';
+                $('aiStatus').textContent = _stepName ? '正在涂抹「' + _stepName + '」...' : '正在涂抹中...';
+                if (callMode) updateCallOverlayStatus($('aiStatus').textContent);
+                fmCompletionCount = Math.max(0, fmCompletionCount - 0.5);
+            } else if (hasMovement) {
+                fmCompletionCount = Math.max(0, fmCompletionCount - 1);
+            }
+        }
+
+        function resetFmForNextStep() {
+            fmCompletionCount = 0;
+            fmInitialLipColor = null;
+            fmColorSamples = [];
+            fmColorHistory = [];
+            fmMovementHistory = [];
+            var activeStep = currentTasks.findIndex(t => !t.done);
+            if (activeStep >= 0) {
+                fmInitializing = true;
+            }
+        }
+
+        async function callAPI(text, img) {
+            const wantsVision = needsImageAnalysis(text);
+            // 通话模式下跳过图片分析，始终用快速流式文字API
+            const canUseVision = !callMode && wantsVision && img && ensureVisionConsent();
+
+            // 构建消息列表：通话模式少发历史，加速响应
+            const historyLimit = callMode ? 4 : 10;
+            const recentHistory = history.slice(-historyLimit);
+            const messages = recentHistory.map(h => ({
+                role: h.role,
+                content: h.content
+            }));
+
+            // 如果用户问附近店铺，把店铺信息注入上下文让 AI 回答
+            const input = text.toLowerCase();
+            if (input.includes('附近') || input.includes('店铺') || input.includes('店') ||
+                input.includes('哪里买') || input.includes('购买') || input.includes('在哪')) {
+                const storeInfo = getNearbyStoresDescription();
+                messages.push({
+                    role: 'user',
+                    content: text + '\n\n[系统补充 - 以下是用户附近的化妆品店铺信息，请基于这些信息回答]\n' + storeInfo
+                });
+            } else if (canUseVision) {
+                // 需要图片分析时，在提示中说明附带了照片
+                messages.push({
+                    role: 'user',
+                    content: text + '\n\n[用户已通过摄像头拍摄了面部照片，请结合照片仔细分析皮肤状态]'
+                });
+                $('aiStatus').textContent = '拍照分析中...';
+                if (callMode) updateCallOverlayStatus('拍照分析中...');
+            } else {
+                // 注入当前任务进度上下文
+                const taskCtx = getTaskContextText();
+                let callModeHint = '';
+                if (callMode) {
+                    if (isTutorialRequest(text) && currentTasks.length === 0) {
+                        // 教程请求：不限制字数，让AI输出完整任务清单
+                        callModeHint = '\n[通话模式：用户请求教程指导，请务必按 [CHECKLIST] 格式输出任务清单，不要省略]';
+                    } else {
+                        callModeHint = '\n[通话模式：请用1-2句话简短回答，不超过50字]';
+                    }
+                }
+                messages.push({ role: 'user', content: text + taskCtx + callModeHint });
+            }
+
+            // 只在需要图片分析且有图片时发送图片
+            const sendImage = canUseVision ? img : null;
+            const reply = await callNativeAI(messages, sendImage, undefined, callMode);
+            return reply;
+        }
+
+        // 处理输入
+        async function handleInput(text) {
+            if (processing) {
+                return;
+            }
+
+            // 语音关键词检测：用户说"完成了"等，直接标记当前步骤
+            if (currentTasks.length > 0 && isCompletionPhrase(text)) {
+                const activeStep = currentTasks.findIndex(t => !t.done);
+                if (activeStep >= 0) {
+                    addMessage(text, true);
+                    history.push({ role: 'user', content: text });
+                    markStepDone(activeStep);
+                    return; // 不需要调 AI，直接完成
+                }
+            }
+
+            processing = true;
+            addMessage(text, true);
+            history.push({ role: 'user', content: text });
+
+            // 通话模式下使用 Gemini Live
+            if (callMode && geminiLiveForCall) {
+                $('aiStatus').textContent = '小美思考中...';
+                updateCallOverlayStatus('小美思考中...');
+                // 通过 Gemini Live 发送文字，语音回复会通过 nativeGeminiLiveAudio 回调返回
+                sendTextToGeminiLive(text);
+                // 不要立即设置 processing = false，等待 AI 回复后再重置
+                // processing 会在 nativeGeminiLiveResponse 中重置
+                return;
+            }
+
+            // 普通模式使用 HTTP API
+            const img = captureFrame();
+            showTyping();
+            $('aiStatus').textContent = callMode ? '小美思考中...' : '思考中...';
+            if (callMode) {
+                updateCallOverlayStatus('小美思考中...');
+            }
+
+            try {
+                const rawReply = await callAPI(text, img);
+                hideTyping();
+                // 处理任务标记（解析清单、完成标记等）
+                const reply = processTaskMarkers(rawReply);
+                if (reply) {
+                    if (_streamingDiv) {
+                        // 流式已经显示了文字，用处理后的版本替换
+                        _streamingDiv.textContent = reply;
+                        _streamingDiv = null;
+                        _streamingCallId = null;
+                    } else {
+                        addMessage(reply);
+                    }
+                    if (_streamingSpoke) {
+                        // 通话模式下已经逐句播报过了，只需刷入剩余缓冲
+                        _flushStreamBuffer();
+                        _streamingSpoke = false;
+                    } else {
+                        speak(reply);
+                    }
+                } else if (_streamingDiv) {
+                    // 回复被全部处理掉了（如纯任务标记），移除流式div
+                    _streamingDiv.remove();
+                    _streamingDiv = null;
+                    _streamingCallId = null;
+                }
+                history.push({ role: 'assistant', content: rawReply });
+            } catch (e) {
+                hideTyping();
+                _clearStreamQueue(); // 出错时清除流式播报队列
+                if (_streamingDiv) {
+                    _streamingDiv.remove();
+                    _streamingDiv = null;
+                    _streamingCallId = null;
+                }
+                const errMsg = e.message || '出错了，请重试';
+                addMessage(errMsg);
+                speak('抱歉，出现了问题');
+            } finally {
+                // 确保 processing 一定会被重置，解决加载卡住问题
+                processing = false;
+                $('aiStatus').textContent = callMode ? '通话中...' : '准备就绪';
+                if (callMode) {
+                    updateCallOverlayStatus((speaking || _streamTTSActive) ? '小美正在说...' : '正在听你说...');
+                }
+                // 通话模式下：如果TTS正在说/即将说，不要立刻启动识别
+                // 让 nativeTTSEnded 来负责重启识别，避免回声打断TTS
+                if (callMode && !listening && !speaking && !_streamTTSActive) {
+                    setTimeout(() => {
+                        if (callMode && !listening && !processing && !speaking && !_streamTTSActive) {
+                            startCallModeRecognition();
+                        }
+                    }, 300);
+                }
+            }
+        }
+
+        // =====================================================
+        // 事件绑定
+        // =====================================================
+
+
+        $('voiceBtn').onclick = () => {
+            toggleCallMode();
+        };
+
+
+        // Web Speech API 回退（浏览器调试用）
+        let webRecognition = null;
+        function fallbackWebSpeech() {
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SR) {
+                addMessage('当前环境不支持语音输入，请使用文字输入', false);
+                return;
+            }
+
+            if (!webRecognition) {
+                webRecognition = new SR();
+                webRecognition.lang = 'zh-CN';
+                webRecognition.continuous = false;
+                webRecognition.interimResults = false;
+
+                webRecognition.onstart = () => window.nativeSpeechStarted();
+                webRecognition.onresult = (e) => {
+                    const text = e.results[0][0].transcript;
+                    window.nativeSpeechResult(text);
+                };
+                webRecognition.onend = () => window.nativeSpeechEnded();
+                webRecognition.onerror = (e) => window.nativeSpeechError(e.error === 'no-speech' ? '没有检测到语音，请再试一次' : '语音识别出错');
+            }
+
+            if (listening) {
+                webRecognition.stop();
+            } else {
+                try {
+                    webRecognition.start();
+                } catch (e) {
+                    resetVoiceUI();
+                }
+            }
+        }
+
+        $('speakerBtn').onclick = () => {
+            voiceEnabled = !voiceEnabled;
+            $('spkOn').classList.toggle('hidden', !voiceEnabled);
+            $('spkOff').classList.toggle('hidden', voiceEnabled);
+            if (!voiceEnabled) {
+                stopSpeak();
+            } else {
+                speak('语音已开启');
+            }
+        };
+
+        $('sendBtn').onclick = () => {
+            const text = $('input').value.trim();
+            if (text) {
+                handleInput(text);
+                $('input').value = '';
+            }
+        };
+
+        $('input').onkeypress = e => {
+            if (e.key === 'Enter') {
+                const text = $('input').value.trim();
+                if (text) {
+                    handleInput(text);
+                    $('input').value = '';
+                }
+            }
+        };
+
+        document.querySelectorAll('.quick-btn').forEach(b => {
+            b.onclick = () => handleInput(b.dataset.text);
+        });
+
+        // 自动重置卡住的 processing 状态（安全网：8秒超时）
+        setInterval(() => {
+            if (processing && !$('typing')) {
+                processing = false;
+                $('aiStatus').textContent = callMode ? '通话中...' : '准备就绪';
+            }
+            // 通话模式安全网：确保识别始终在运行（即使 TTS 播放中也需要识别，用于打断检测）
+            if (callMode && !listening && !processing) {
+                startCallModeRecognition();
+            }
+        }, 8000);
+
+        // 初始化（延迟启动摄像头，确保 WKWebView 委托已就绪）
+        setTimeout(() => initCamera(), 500);
+
+        // 请求定位（原生桥接）
+        setTimeout(() => {
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.requestLocation) {
+                window.webkit.messageHandlers.requestLocation.postMessage({});
+            }
+            // 检查 API Key 状态
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.getAPIKey) {
+                window.webkit.messageHandlers.getAPIKey.postMessage({});
+            }
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.getZhipuKey) {
+                window.webkit.messageHandlers.getZhipuKey.postMessage({});
+            }
+        }, 1000);
+
+        // =====================================================
+        // Gemini Live 实时语音对话（通话模式）
+        // =====================================================
+        let geminiLiveEnabled = false;
+        let geminiLiveForCall = false; // 是否用于通话模式
+        let geminiLiveTimer = null;
+        let geminiLiveProcessing = false;
+        let geminiLiveLastAnalysis = '';
+        const GEMINI_LIVE_FPS = 1; // 每秒发送1帧
+
+        function startGeminiLiveForCall() {
+            geminiLiveEnabled = true;
+            geminiLiveForCall = true;
+            $('aiStatus').textContent = 'Gemini Live 通话中...';
+
+            // 通知 Swift 启动 Gemini Live WebSocket
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.startGeminiLive) {
+                window.webkit.messageHandlers.startGeminiLive.postMessage({});
+            }
+        }
+
+        function stopGeminiLiveForCall() {
+            geminiLiveEnabled = false;
+            geminiLiveForCall = false;
+            $('aiStatus').textContent = '准备就绪';
+
+            // 通知 Swift 停止 Gemini Live
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.stopGeminiLive) {
+                window.webkit.messageHandlers.stopGeminiLive.postMessage({});
+            }
+        }
+
+        function sendTextToGeminiLive(text) {
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.sendGeminiLiveText) {
+                window.webkit.messageHandlers.sendGeminiLiveText.postMessage({ text: text });
+            }
+        }
+
+        function startGeminiLive() {
+            if (geminiLiveTimer || !visionEnabled) return;
+
+            geminiLiveEnabled = true;
+            $('aiStatus').textContent = 'AI 实时分析中...';
+
+            // 通知 Swift 启动 Gemini Live WebSocket
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.startGeminiLive) {
+                window.webkit.messageHandlers.startGeminiLive.postMessage({});
+            }
+
+            // 定时发送视频帧到 Gemini Live
+            geminiLiveTimer = setInterval(() => {
+                if (geminiLiveProcessing || !stream) return;
+
+                const frame = captureFrame(true); // 640x480 高清
+                if (!frame) return;
+
+                geminiLiveProcessing = true;
+                sendFrameToGeminiLive(frame);
+            }, 1000 / GEMINI_LIVE_FPS);
+        }
+
+        function stopGeminiLive() {
+            if (geminiLiveTimer) {
+                clearInterval(geminiLiveTimer);
+                geminiLiveTimer = null;
+            }
+            geminiLiveEnabled = false;
+            geminiLiveProcessing = false;
+            $('aiStatus').textContent = '准备就绪';
+
+            // 通知 Swift 停止 Gemini Live
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.stopGeminiLive) {
+                window.webkit.messageHandlers.stopGeminiLive.postMessage({});
+            }
+        }
+
+        function sendFrameToGeminiLive(base64Image) {
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.sendGeminiLiveImage) {
+                window.webkit.messageHandlers.sendGeminiLiveImage.postMessage({
+                    image: base64Image,
+                    text: '用5个字以内描述当前画面中的人脸状态'
+                });
+            }
+            // 快速重置处理标志，因为 WebSocket 是异步的
+            setTimeout(() => {
+                geminiLiveProcessing = false;
+            }, 100);
+        }
+
+        // Swift 回调：接收 Gemini Live 响应
+        window.nativeGeminiLiveResponse = function(text) {
+            // 通话模式：显示文字回复
+            if (geminiLiveForCall && text) {
+                addMessage(text);
+                showCallSubtitle(text, 'ai');
+                history.push({ role: 'assistant', content: text });
+                processing = false; // 重置 processing 状态
+                $('aiStatus').textContent = '正在听你说...';
+                updateCallOverlayStatus('正在听你说...');
+                // 确保识别在运行
+                if (!listening && !speaking) {
+                    setTimeout(() => {
+                        if (callMode && !listening && !processing && !speaking) {
+                            startCallModeRecognition();
+                        }
+                    }, 500);
+                }
+            } else if (text && text !== geminiLiveLastAnalysis) {
+                // 视频分析模式
+                geminiLiveLastAnalysis = text;
+                $('aiStatus').textContent = text.substring(0, 20) + (text.length > 20 ? '...' : '');
+            }
+        };
+
+        // Gemini Live 音频回复（原生语音）
+        window.nativeGeminiLiveAudio = function(audioData) {
+            // 通话模式：播放原生音频
+            if (geminiLiveForCall) {
+                // 音频会由 Swift 的 TTSManager 自动播放
+                speaking = true;
+                // 播放完成后会调用 nativeTTSEnded
+            }
+        };
+
+        // 中断 Gemini Live（用户打断时调用）
+        function interruptGeminiLive() {
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.interruptGeminiLive) {
+                window.webkit.messageHandlers.interruptGeminiLive.postMessage({});
+            }
+        }
+    </script>
+</body>
+</html>
