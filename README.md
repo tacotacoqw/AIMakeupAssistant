@@ -1,42 +1,21 @@
 # AI Makeup Assistant
 
-一个基于 Gemini Live API 的 iOS 美妆助手应用。
+一个基于 Gemini API 的 iOS 美妆助手应用。
 
 ## 功能特性
 
-- 实时语音对话
-- 豆包 TTS 语音合成
 - AI 美妆建议
+- Edge TTS 语音合成（免费云端 Neural 语音，晓伊 gentle 风格）
 
 ## 环境配置
 
-### 1. 安装依赖
+iOS 端通过 `proxy_server.py` 访问 Gemini API。在 Mac 上运行：
 
 ```bash
-pip install python-dotenv
+python3 proxy_server.py
 ```
 
-### 2. 配置环境变量
-
-复制 `.env.example` 文件为 `.env`：
-
-```bash
-cp .env.example .env
-```
-
-然后编辑 `.env` 文件，填入你的 VolcEngine API 密钥：
-
-```
-DOUBAO_APP_ID=你的应用ID
-ACCESS_KEY_ID=你的AccessKeyID
-SECRET_ACCESS_KEY=你的SecretAccessKey
-```
-
-### 3. 运行代理服务器
-
-```bash
-python3 doubao_tts_proxy.py
-```
+代理监听 `http://0.0.0.0:8888`，iOS 端默认连接 `192.168.1.114:8888`。
 
 ## TestFlight 分发
 

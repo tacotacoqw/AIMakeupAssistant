@@ -215,24 +215,18 @@ struct PermissionRow: View {
 // MARK: - AI Service (Gemini)
 
 class AIService {
-    // Gemini - 统一的 AI 服务
-    private let geminiKey = "AIzaSyAbBeRmDER_9sFhUvLYy1P5WsYj8QOE6yw"
-    private let geminiModel = "gemini-2.5-flash"
+    // 代理服务器配置 — 所有 Gemini 流量都过 Mac 代理（API key 在代理的 .env 里）
+    // 切换网络环境时改这里的 IP
+    private static let proxyHost = "192.168.0.164:8888"
+    private let proxyURL = "http://\(AIService.proxyHost)/api/chat"
+    private let liveProxyURL = "ws://\(AIService.proxyHost)/api/live"
 
-    // 代理服务器配置 - 通过 Mac 代理访问 Gemini
-    private let useProxy = true
-    private let proxyURL = "http://192.168.1.114:8888/api/chat"
-
-    // 豆包配置
-    private let doubaoAppId = "1000005084"
-    private let doubaoToken = "default_token"  // Token 可以使用任意非空值
-    private let doubaoResourceId = "volc.bigmodel.sauc"  // 端到端实时语音大模型的默认 Resource ID
-
-    // Doubao Live Manager
-    private var doubaoLiveManager: DoubaoLiveManager?
-    var onDoubaoLiveResponse: ((String) -> Void)?
-    var onDoubaoLiveAudio: (() -> Void)?
     weak var ttsManager: TTSManager?
+
+    // Gemini Live（实时语音对话）
+    private var geminiLiveManager: GeminiLiveManager?
+    var onGeminiLiveResponse: ((String) -> Void)?
+    var onGeminiLiveAudio: (() -> Void)?
 
     private let systemPrompt = """
     你是"小美"，一个专业的AI美妆助手。你的职责是：
@@ -320,13 +314,8 @@ class AIService {
     6. 所有你理解的用户意图，必须是语义完整、口语自然、符合人类真实表达的句子
     """
 
-    var isConfigured: Bool {
-        !geminiKey.isEmpty
-    }
-
-    var isVisionConfigured: Bool {
-        !geminiKey.isEmpty
-    }
+    var isConfigured: Bool { true }
+    var isVisionConfigured: Bool { true }
 
     func chat(messages: [[String: Any]], images: [String] = [], temperature: Double = 0.8, completion: @escaping (Result<String, Error>) -> Void) {
         // 统一使用 Gemini（文本和图片）
@@ -337,20 +326,7 @@ class AIService {
     private var streamDelegate: GeminiStreamingDelegate?
 
     func chatStream(messages: [[String: Any]], maxTokens: Int = 500, onChunk: @escaping (String) -> Void, completion: @escaping (Result<String, Error>) -> Void) {
-        guard !geminiKey.isEmpty else {
-            completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "请先设置 Gemini API Key"])))
-            return
-        }
-
-        // 使用普通 API（非流式），但逐字发送模拟流式效果
-        let urlString: String
-        if useProxy {
-            urlString = proxyURL
-        } else {
-            urlString = "https://generativelanguage.googleapis.com/v1beta/models/\(geminiModel):generateContent?key=\(geminiKey)"
-        }
-
-        guard let url = URL(string: urlString) else {
+        guard let url = URL(string: proxyURL) else {
             return
         }
 
@@ -432,6 +408,29 @@ class AIService {
                 print("📥 Gemini 原始响应长度: \(responseString.count), 前500字符: \(responseString.prefix(500))")
             }
 
+            // HTTP 非 200 → 优先读代理 / Gemini 返回的 error.message，给用户人话
+            if let httpResp = response as? HTTPURLResponse, httpResp.statusCode != 200 {
+                let friendly: String
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    if let topErr = json["error"] as? String {
+                        friendly = topErr
+                    } else if let errObj = json["error"] as? [String: Any],
+                              let m = errObj["message"] as? String {
+                        friendly = m
+                    } else {
+                        friendly = "AI 出错了 (HTTP \(httpResp.statusCode))"
+                    }
+                } else {
+                    friendly = "AI 出错了 (HTTP \(httpResp.statusCode))"
+                }
+                print("❌ chatStream HTTP \(httpResp.statusCode): \(friendly.prefix(200))")
+                DispatchQueue.main.async {
+                    completion(.failure(NSError(domain: "", code: httpResp.statusCode,
+                        userInfo: [NSLocalizedDescriptionKey: friendly])))
+                }
+                return
+            }
+
             do {
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                    let candidates = json["candidates"] as? [[String: Any]],
@@ -462,10 +461,23 @@ class AIService {
                         }
                     }
                 } else {
-                    let errorMsg = String(data: data, encoding: .utf8) ?? "解析失败"
-                    print("❌ 响应格式错误: \(errorMsg)")
+                    // 200 但 JSON 结构异常（如 finishReason=MAX_TOKENS 没文本、内容被过滤）
+                    var friendly = "AI 这次没回出内容，请换个问法试试"
+                    if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let cands = json["candidates"] as? [[String: Any]],
+                       let first = cands.first {
+                        if let reason = first["finishReason"] as? String {
+                            switch reason {
+                            case "MAX_TOKENS": friendly = "回复太长被截断了，请让 AI 简短回答"
+                            case "SAFETY": friendly = "AI 觉得这个话题不合适，请换个问题"
+                            case "RECITATION": friendly = "AI 拒绝了重复输出，请换个问法"
+                            default: friendly = "AI 提前结束 (\(reason))，请重试"
+                            }
+                        }
+                    }
+                    print("❌ chatStream 结构异常: \(friendly)")
                     DispatchQueue.main.async {
-                        completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "响应格式错误: \(errorMsg)"])))
+                        completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: friendly])))
                     }
                 }
             } catch {
@@ -479,20 +491,7 @@ class AIService {
 
     // Gemini 视觉分析（支持文本和图片）
     private func chatWithGemini(messages: [[String: Any]], images: [String], temperature: Double = 0.8, completion: @escaping (Result<String, Error>) -> Void) {
-        guard !geminiKey.isEmpty else {
-            completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "请先在设置中配置 Gemini API Key"])))
-            return
-        }
-
-        // 根据配置选择直连或代理
-        let urlString: String
-        if useProxy {
-            urlString = proxyURL
-        } else {
-            urlString = "https://generativelanguage.googleapis.com/v1beta/models/\(geminiModel):generateContent?key=\(geminiKey)"
-        }
-
-        guard let url = URL(string: urlString) else { return }
+        guard let url = URL(string: proxyURL) else { return }
 
         // 构建对话历史
         var contents: [[String: Any]] = []
@@ -585,43 +584,48 @@ class AIService {
     }
 
     // 通用请求发送
-    // MARK: - Gemini Live Methods
+    // MARK: - Gemini Live Methods（Google Gemini Live 实时语音对话）
 
     func startGeminiLive() {
-        // 使用豆包实时语音大模型
-        doubaoLiveManager = DoubaoLiveManager(appId: doubaoAppId, token: doubaoToken, resourceId: doubaoResourceId)
-        doubaoLiveManager?.onTextResponse = { [weak self] text in
-            self?.onDoubaoLiveResponse?(text)
+        // 复用既有连接（避免重复 connect）
+        if geminiLiveManager != nil { return }
+
+        let manager = GeminiLiveManager(proxyURL: liveProxyURL)
+        manager.onTextResponse = { [weak self] text in
+            self?.onGeminiLiveResponse?(text)
         }
-        doubaoLiveManager?.onAudioResponse = { [weak self] audioData in
-            self?.ttsManager?.playDoubaoAudio(audioData)
-            self?.onDoubaoLiveAudio?()
+        manager.onAudioResponse = { [weak self] pcmData in
+            // Gemini Live 返回 24kHz 16bit 单声道裸 PCM，TTSManager 内套 WAV 头再播放
+            self?.ttsManager?.playLivePCMAudio(pcmData)
+            self?.onGeminiLiveAudio?()
         }
-        doubaoLiveManager?.onError = { error in
-            print("Doubao Live error: \(error)")
+        manager.onError = { error in
+            print("❌ Gemini Live error: \(error.localizedDescription)")
         }
-        doubaoLiveManager?.connect()
+        manager.connect()
+        geminiLiveManager = manager
     }
 
     func stopGeminiLive() {
-        doubaoLiveManager?.disconnect()
-        doubaoLiveManager = nil
+        geminiLiveManager?.disconnect()
+        geminiLiveManager = nil
+        ttsManager?.stopSpeaking()
     }
 
     func sendToGeminiLive(text: String) {
-        doubaoLiveManager?.sendText(text)
+        geminiLiveManager?.sendText(text)
     }
 
     func sendTextToGeminiLive(text: String) {
-        doubaoLiveManager?.sendText(text)
+        geminiLiveManager?.sendText(text)
     }
 
     func sendImageToGeminiLive(base64Image: String, withText text: String = "") {
-        doubaoLiveManager?.sendImage(base64Image, withText: text)
+        geminiLiveManager?.sendImage(base64Image, withText: text)
     }
 
     func interruptGeminiLive() {
-        doubaoLiveManager?.interrupt()
+        geminiLiveManager?.interrupt()
         ttsManager?.stopSpeaking()
     }
 }
@@ -721,11 +725,21 @@ class TTSManager: NSObject, AVSpeechSynthesizerDelegate, AVAudioPlayerDelegate, 
             currentVoiceId = preferredVoices.first(where: { AVSpeechSynthesisVoice(identifier: $0) != nil }) ?? ""
         }
 
-        // Edge TTS 配置
-        edgeVoice = UserDefaults.standard.string(forKey: "edge_voice_id") ?? "zh-CN-XiaoxiaoNeural"
+        // Edge TTS 配置：默认晓伊（更自然、温柔），从旧默认晓晓一次性迁移
+        let defaultEdgeVoice = "zh-CN-XiaoyiNeural"
+        let savedEdgeVoice = UserDefaults.standard.string(forKey: "edge_voice_id")
+        let didMigrateVoice = UserDefaults.standard.bool(forKey: "edge_voice_migrated_v2")
+        if !didMigrateVoice && savedEdgeVoice == "zh-CN-XiaoxiaoNeural" {
+            edgeVoice = defaultEdgeVoice
+            UserDefaults.standard.set(defaultEdgeVoice, forKey: "edge_voice_id")
+        } else {
+            edgeVoice = savedEdgeVoice ?? defaultEdgeVoice
+        }
+        UserDefaults.standard.set(true, forKey: "edge_voice_migrated_v2")
+
         useCloudTTS = UserDefaults.standard.object(forKey: "use_cloud_tts") != nil
             ? UserDefaults.standard.bool(forKey: "use_cloud_tts")
-            : true // 默认启用 Gemini 原生语音
+            : true // 默认启用 Edge TTS 云端语音
 
         super.init()
         synthesizer.delegate = self
@@ -734,7 +748,7 @@ class TTSManager: NSObject, AVSpeechSynthesizerDelegate, AVAudioPlayerDelegate, 
     // MARK: - Gemini 原生语音合成
 
     private var isPlayingGeminiAudio = false
-    private let geminiTTSProxyUrl = "http://192.168.1.114:8888/api/tts"
+    private let geminiTTSProxyUrl = "http://192.168.0.164:8888/api/tts"
 
     private func speakWithGemini(_ text: String) {
         intentionallyStopped = false
@@ -827,73 +841,6 @@ class TTSManager: NSObject, AVSpeechSynthesizerDelegate, AVAudioPlayerDelegate, 
             print("❌ Edge TTS 音频播放错误: \(error.localizedDescription)")
             onSpeakEnd?()
         }
-    }
-
-    // MARK: - 豆包 TTS 配置（已弃用）
-
-    private let doubaoAppId = "1000005084"
-    private let doubaoToken = "default_token"
-    private let doubaoProxyUrl = "http://192.168.1.114:8889/tts"  // 使用代理服务器
-
-    private func speakWithDoubao(_ text: String) {
-        intentionallyStopped = false
-        onSpeakStart?()
-
-        guard let url = URL(string: doubaoProxyUrl) else {
-            fallbackToSystemTTS(text)
-            return
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        let requestBody: [String: Any] = [
-            "text": text,
-            "reqid": UUID().uuidString
-        ]
-
-        do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
-        } catch {
-            fallbackToSystemTTS(text)
-            return
-        }
-
-        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            guard let self = self else { return }
-
-            if let error = error {
-                print("❌ 豆包 TTS 网络错误: \(error.localizedDescription)")
-                DispatchQueue.main.async {
-                    self.fallbackToSystemTTS(text)
-                }
-                return
-            }
-
-            guard let data = data else {
-                print("❌ 豆包 TTS 无数据返回")
-                DispatchQueue.main.async {
-                    self.fallbackToSystemTTS(text)
-                }
-                return
-            }
-
-            print("✓ 豆包 TTS 收到数据: \(data.count) bytes")
-
-            // 播放音频
-            DispatchQueue.main.async {
-                do {
-                    self.audioPlayer = try AVAudioPlayer(data: data)
-                    self.audioPlayer?.delegate = self
-                    print("✓ 开始播放豆包音频")
-                    self.audioPlayer?.play()
-                } catch {
-                    print("❌ 音频播放错误: \(error.localizedDescription)")
-                    self.fallbackToSystemTTS(text)
-                }
-            }
-        }.resume()
     }
 
     private func fallbackToSystemTTS(_ text: String) {
@@ -1000,7 +947,8 @@ class TTSManager: NSObject, AVSpeechSynthesizerDelegate, AVAudioPlayerDelegate, 
                 .replacingOccurrences(of: ">", with: "&gt;")
 
             let requestId = UUID().uuidString.replacingOccurrences(of: "-", with: "")
-            let ssmlMsg = "X-RequestId:\(requestId)\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='zh-CN'><voice name='\(self.edgeVoice)'><prosody pitch='+0Hz' rate='+0%' volume='+0%'>\(escapedText)</prosody></voice></speak>"
+            // gentle 风格 + 略慢语速，听感更自然温柔
+            let ssmlMsg = "X-RequestId:\(requestId)\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xmlns:mstts='http://www.w3.org/2001/mstts' xml:lang='zh-CN'><voice name='\(self.edgeVoice)'><mstts:express-as style='gentle' styledegree='1.3'><prosody pitch='+0Hz' rate='-5%' volume='+0%'>\(escapedText)</prosody></mstts:express-as></voice></speak>"
 
             ws.send(.string(ssmlMsg)) { sendError in
                 if sendError != nil {
@@ -1101,26 +1049,6 @@ class TTSManager: NSObject, AVSpeechSynthesizerDelegate, AVAudioPlayerDelegate, 
         DispatchQueue.main.async { self.onSpeakEnd?() }
     }
 
-    // MARK: - Doubao Audio Playback
-
-    func playDoubaoAudio(_ audioData: Data) {
-        stopSpeaking()
-
-        do {
-            // 豆包返回的是 PCM 16kHz 16bit 单声道音频数据
-            audioPlayer = try AVAudioPlayer(data: audioData)
-            audioPlayer?.delegate = self
-            audioPlayer?.prepareToPlay()
-            audioPlayer?.play()
-            DispatchQueue.main.async { self.onSpeakStart?() }
-        } catch {
-            print("Failed to play Doubao audio: \(error)")
-            DispatchQueue.main.async { self.onSpeakEnd?() }
-        }
-    }
-
-    // MARK: - Gemini Live Audio Playback
-
     // MARK: - 系统 TTS（回退方案）
 
     func getChineseVoices() -> [[String: String]] {
@@ -1159,12 +1087,61 @@ class TTSManager: NSObject, AVSpeechSynthesizerDelegate, AVAudioPlayerDelegate, 
         intentionallyStopped = false
         pendingText = text
 
-        // 优先使用 Gemini 原生语音
+        // 优先用 Gemini 2.5 神经 TTS（端到端，自然度远超 Edge），失败回 Edge，再失败回系统
         if useCloudTTS {
-            speakWithGemini(text)
+            speakWithGeminiTTS(text)
         } else {
             speakWithSystem(text, rate: rate, pitch: pitch)
         }
+    }
+
+    // MARK: - 云端神经 TTS（默认火山豆包；通过 Mac 代理）
+
+    private static let ttsProxyURL = "http://192.168.0.164:8888/api/tts"
+    private static let defaultVolcVoice = "zh_female_cancan_mars_bigtts"
+
+    func setVolcVoice(_ voiceId: String) {
+        UserDefaults.standard.set(voiceId, forKey: "volc_voice_id")
+    }
+
+    func getVolcVoiceId() -> String {
+        return UserDefaults.standard.string(forKey: "volc_voice_id") ?? TTSManager.defaultVolcVoice
+    }
+
+    private func speakWithGeminiTTS(_ text: String) {
+        guard let url = URL(string: TTSManager.ttsProxyURL) else {
+            speakWithEdge(text)
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 30
+        let body: [String: Any] = ["text": text, "voice": getVolcVoiceId()]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self, !self.intentionallyStopped, self.pendingText == text else { return }
+
+            if let error = error {
+                print("❌ 云 TTS 网络错: \(error.localizedDescription)")
+                DispatchQueue.main.async { self.speakWithEdge(text) }
+                return
+            }
+            if let http = response as? HTTPURLResponse, http.statusCode != 200 {
+                print("❌ 云 TTS HTTP \(http.statusCode)")
+                DispatchQueue.main.async { self.speakWithEdge(text) }
+                return
+            }
+            guard let audio = data, !audio.isEmpty else {
+                DispatchQueue.main.async { self.speakWithEdge(text) }
+                return
+            }
+
+            // 代理返回的是 MP3（火山）或 WAV/PCM（Gemini 备用）；AVAudioPlayer 都能直接吃 MP3 和 WAV
+            DispatchQueue.main.async { self.playAudioData(audio) }
+        }.resume()
     }
 
     private func speakWithSystem(_ text: String, rate: Float = 0.52, pitch: Float = 1.1) {
@@ -1224,6 +1201,99 @@ class TTSManager: NSObject, AVSpeechSynthesizerDelegate, AVAudioPlayerDelegate, 
         audioPlayer = nil
         synthesizer.stopSpeaking(at: .immediate)
         isPlayingGeminiAudio = false
+        stopLivePCM()
+    }
+
+    // MARK: - Gemini Live PCM 流式播放（24kHz 16bit mono）
+
+    private var liveAudioEngine: AVAudioEngine?
+    private var liveAudioNode: AVAudioPlayerNode?
+    private let liveAudioFormat: AVAudioFormat = {
+        AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 24000, channels: 1, interleaved: true)!
+    }()
+    private var liveAudioEndTimer: DispatchWorkItem?
+    private var isPlayingLiveAudio = false
+
+    private func ensureLiveEngineStarted() {
+        if liveAudioEngine?.isRunning == true { return }
+
+        do {
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetoothHFP])
+            try audioSession.setActive(true)
+        } catch {
+            print("❌ Live audio session 配置失败: \(error.localizedDescription)")
+            return
+        }
+
+        let engine = AVAudioEngine()
+        let node = AVAudioPlayerNode()
+        engine.attach(node)
+        engine.connect(node, to: engine.mainMixerNode, format: liveAudioFormat)
+
+        do {
+            try engine.start()
+            node.play()
+            liveAudioEngine = engine
+            liveAudioNode = node
+        } catch {
+            print("❌ Live audio engine 启动失败: \(error.localizedDescription)")
+            liveAudioEngine = nil
+            liveAudioNode = nil
+        }
+    }
+
+    func playLivePCMAudio(_ pcmData: Data) {
+        guard !pcmData.isEmpty else { return }
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.ensureLiveEngineStarted()
+            guard let node = self.liveAudioNode else { return }
+
+            let frameCount = AVAudioFrameCount(pcmData.count / 2) // Int16 mono = 2 bytes/frame
+            guard frameCount > 0,
+                  let buffer = AVAudioPCMBuffer(pcmFormat: self.liveAudioFormat, frameCapacity: frameCount) else {
+                return
+            }
+            buffer.frameLength = frameCount
+
+            pcmData.withUnsafeBytes { raw in
+                guard let src = raw.bindMemory(to: Int16.self).baseAddress,
+                      let dst = buffer.int16ChannelData?[0] else { return }
+                memcpy(dst, src, pcmData.count)
+            }
+
+            node.scheduleBuffer(buffer, completionHandler: nil)
+
+            if !self.isPlayingLiveAudio {
+                self.isPlayingLiveAudio = true
+                self.onSpeakStart?()
+            }
+
+            // 500ms 无新 chunk 视为本轮播放结束，触发 onSpeakEnd
+            self.liveAudioEndTimer?.cancel()
+            let endTask = DispatchWorkItem { [weak self] in
+                guard let self = self, self.isPlayingLiveAudio else { return }
+                self.isPlayingLiveAudio = false
+                self.onSpeakEnd?()
+            }
+            self.liveAudioEndTimer = endTask
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: endTask)
+        }
+    }
+
+    private func stopLivePCM() {
+        liveAudioEndTimer?.cancel()
+        liveAudioEndTimer = nil
+        liveAudioNode?.stop()
+        liveAudioEngine?.stop()
+        liveAudioNode = nil
+        liveAudioEngine = nil
+        if isPlayingLiveAudio {
+            isPlayingLiveAudio = false
+            DispatchQueue.main.async { self.onSpeakEnd?() }
+        }
     }
 
     var isSpeaking: Bool {
@@ -2011,6 +2081,8 @@ struct WebViewContainer: UIViewRepresentable {
         contentController.add(context.coordinator, name: "setCloudVoice")
         contentController.add(context.coordinator, name: "setUseCloudTTS")
         contentController.add(context.coordinator, name: "getCloudTTSStatus")
+        contentController.add(context.coordinator, name: "setVolcVoice")
+        contentController.add(context.coordinator, name: "getVolcVoice")
         contentController.add(context.coordinator, name: "setWhisperKey")
         contentController.add(context.coordinator, name: "getWhisperKey")
         contentController.add(context.coordinator, name: "detectFace")
@@ -2207,7 +2279,11 @@ struct WebViewContainer: UIViewRepresentable {
                                     self?.callJS("window.nativeAIResponse('\(escaped)', '\(callId)')")
                                 case .failure(let error):
                                     print("❌ 流式响应失败，callId: \(callId), 错误: \(error.localizedDescription)")
-                                    let escaped = error.localizedDescription.replacingOccurrences(of: "'", with: "\\'")
+                                    let escaped = error.localizedDescription
+                                        .replacingOccurrences(of: "\\", with: "\\\\")
+                                        .replacingOccurrences(of: "'", with: "\\'")
+                                        .replacingOccurrences(of: "\n", with: "\\n")
+                                        .replacingOccurrences(of: "\r", with: "")
                                     self?.callJS("window.nativeAIError('\(escaped)', '\(callId)')")
                                 }
                             }
@@ -2224,7 +2300,11 @@ struct WebViewContainer: UIViewRepresentable {
                                         .replacingOccurrences(of: "\r", with: "")
                                     self?.callJS("window.nativeAIResponse('\(escaped)', '\(callId)')")
                                 case .failure(let error):
-                                    let escaped = error.localizedDescription.replacingOccurrences(of: "'", with: "\\'")
+                                    let escaped = error.localizedDescription
+                                        .replacingOccurrences(of: "\\", with: "\\\\")
+                                        .replacingOccurrences(of: "'", with: "\\'")
+                                        .replacingOccurrences(of: "\n", with: "\\n")
+                                        .replacingOccurrences(of: "\r", with: "")
                                     self?.callJS("window.nativeAIError('\(escaped)', '\(callId)')")
                                 }
                             }
@@ -2267,6 +2347,14 @@ struct WebViewContainer: UIViewRepresentable {
                 let isCloud = ttsManager.getUseCloudTTS()
                 let cloudVoice = ttsManager.getCloudVoiceId().replacingOccurrences(of: "'", with: "\\'")
                 callJS("window.nativeCloudTTSStatus(\(isCloud), '\(cloudVoice)')")
+            case "setVolcVoice":
+                if let voiceId = message.body as? String {
+                    ttsManager.setVolcVoice(voiceId)
+                    callJS("window.nativeVolcVoiceSet(true)")
+                }
+            case "getVolcVoice":
+                let id = ttsManager.getVolcVoiceId().replacingOccurrences(of: "'", with: "\\'")
+                callJS("window.nativeVolcVoiceCurrent('\(id)')")
             case "setWhisperKey":
                 if let key = message.body as? String {
                     speechManager.whisperAPIKey = key
@@ -2366,10 +2454,10 @@ struct WebViewContainer: UIViewRepresentable {
                 }
 
             case "startGeminiLive":
-                aiService.onDoubaoLiveResponse = { [weak self] text in
+                aiService.onGeminiLiveResponse = { [weak self] text in
                     self?.callJS("window.nativeGeminiLiveResponse('\(text.replacingOccurrences(of: "'", with: "\\'"))')")
                 }
-                aiService.onDoubaoLiveAudio = { [weak self] in
+                aiService.onGeminiLiveAudio = { [weak self] in
                     self?.callJS("window.nativeGeminiLiveAudio()")
                 }
                 aiService.startGeminiLive()
@@ -2426,216 +2514,6 @@ struct WebViewContainer: UIViewRepresentable {
     }
 }
 
-// MARK: - Doubao Live Manager (豆包实时语音大模型)
-
-class DoubaoLiveManager: NSObject {
-    private var webSocketTask: URLSessionWebSocketTask?
-    private var session: URLSession?
-    private let appId: String
-    private let token: String
-    private let resourceId: String
-
-    var onTextResponse: ((String) -> Void)?
-    var onAudioResponse: ((Data) -> Void)?
-    var onError: ((Error) -> Void)?
-
-    init(appId: String, token: String, resourceId: String) {
-        self.appId = appId
-        self.token = token
-        self.resourceId = resourceId
-        super.init()
-    }
-
-    func connect() {
-        // 豆包实时语音大模型 WebSocket 地址
-        let urlString = "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel"
-        guard let url = URL(string: urlString) else {
-            onError?(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"]))
-            return
-        }
-
-        let configuration = URLSessionConfiguration.default
-        session = URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
-        webSocketTask = session?.webSocketTask(with: url)
-
-        // 添加认证头
-        var request = URLRequest(url: url)
-        request.setValue("Bearer; \(token)", forHTTPHeaderField: "Authorization")
-
-        webSocketTask = session?.webSocketTask(with: request)
-        webSocketTask?.resume()
-
-        sendSetup()
-        receiveMessage()
-    }
-
-    func disconnect() {
-        webSocketTask?.cancel(with: .goingAway, reason: nil)
-        webSocketTask = nil
-        session?.invalidateAndCancel()
-        session = nil
-    }
-
-    func interrupt() {
-        // 发送中断消息
-        let interruptMessage: [String: Any] = [
-            "type": "interrupt"
-        ]
-        sendMessage(interruptMessage)
-    }
-
-    private func sendSetup() {
-        let systemInstruction = """
-        你是"小美"，一个专业又亲切的AI美妆助手。你正在和用户进行实时语音通话。
-
-        【对话风格 - 极其重要！】
-        - 用自然的口语表达，像朋友聊天一样轻松随意
-        - 回复要简短（1-2句话），不要长篇大论
-        - 多用语气词："嗯"、"哦"、"呀"、"啦"、"呢"、"~"
-        - 避免书面语，用口语化表达
-        - 表达要有情感和共鸣
-
-        【回复原则】
-        - 每次只说1-2句话，让对话自然流畅
-        - 不要一次性说太多，给用户回应的机会
-        - 听到用户说话后，先简短回应表示理解，再给建议
-
-        记住：你是在和朋友聊天，不是在做客服！要自然、亲切、有人情味！
-        """
-
-        let setup: [String: Any] = [
-            "app": [
-                "appid": appId,
-                "token": token,
-                "cluster": "volcengine_streaming_common"
-            ],
-            "user": [
-                "uid": "user_\(UUID().uuidString)"
-            ],
-            "audio": [
-                "format": "pcm",
-                "sample_rate": 16000,
-                "channel": 1,
-                "bits": 16
-            ],
-            "request": [
-                "reqid": UUID().uuidString,
-                "resource_id": resourceId,
-                "workflow": [
-                    "language": "zh-CN",
-                    "show_utterances": true,
-                    "result_type": "full"
-                ],
-                "parameters": [
-                    "system_prompt": systemInstruction
-                ]
-            ]
-        ]
-        sendMessage(setup)
-    }
-
-    func sendText(_ text: String) {
-        let message: [String: Any] = [
-            "type": "text",
-            "text": text
-        ]
-        sendMessage(message)
-    }
-
-    func sendAudio(_ audioData: Data) {
-        // 发送音频数据
-        webSocketTask?.send(.data(audioData)) { [weak self] error in
-            if let error = error {
-                self?.onError?(error)
-            }
-        }
-    }
-
-    func sendImage(_ base64Image: String, withText text: String = "") {
-        let message: [String: Any] = [
-            "type": "multimodal",
-            "text": text,
-            "image": base64Image
-        ]
-        sendMessage(message)
-    }
-
-    private func sendMessage(_ message: [String: Any]) {
-        guard let jsonData = try? JSONSerialization.data(withJSONObject: message),
-              let jsonString = String(data: jsonData, encoding: .utf8) else {
-            return
-        }
-
-        let wsMessage = URLSessionWebSocketTask.Message.string(jsonString)
-        webSocketTask?.send(wsMessage) { [weak self] error in
-            if let error = error {
-                self?.onError?(error)
-            }
-        }
-    }
-
-    private func receiveMessage() {
-        webSocketTask?.receive { [weak self] result in
-            guard let self = self else { return }
-
-            switch result {
-            case .success(let message):
-                switch message {
-                case .string(let text):
-                    self.handleResponse(text)
-                case .data(let data):
-                    self.handleAudioData(data)
-                @unknown default:
-                    break
-                }
-                self.receiveMessage()
-            case .failure(let error):
-                self.onError?(error)
-            }
-        }
-    }
-
-    private func handleResponse(_ text: String) {
-        guard let data = text.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return
-        }
-
-        // 处理文字响应
-        if let type = json["type"] as? String, type == "text",
-           let content = json["text"] as? String {
-            DispatchQueue.main.async {
-                self.onTextResponse?(content)
-            }
-        }
-
-        // 处理错误
-        if let code = json["code"] as? Int, code != 0,
-           let message = json["message"] as? String {
-            let error = NSError(domain: "", code: code, userInfo: [NSLocalizedDescriptionKey: message])
-            DispatchQueue.main.async {
-                self.onError?(error)
-            }
-        }
-    }
-
-    private func handleAudioData(_ data: Data) {
-        // 处理音频数据
-        DispatchQueue.main.async {
-            self.onAudioResponse?(data)
-        }
-    }
-}
-
-extension DoubaoLiveManager: URLSessionWebSocketDelegate {
-    func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {
-        print("Doubao Live WebSocket connected")
-    }
-
-    func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
-        print("Doubao Live WebSocket disconnected")
-    }
-}
 
 // MARK: - Gemini TTS Manager (专用于语音合成)
 
@@ -2893,21 +2771,22 @@ extension GeminiTTSManager: URLSessionWebSocketDelegate {
 class GeminiLiveManager: NSObject {
     var webSocketTask: URLSessionWebSocketTask?
     private var session: URLSession?
-    private let apiKey: String
-    private let model = "gemini-2.0-flash-exp"
+    private let proxyURL: String
+    // 当前唯一支持 bidiGenerateContent 的稳定别名（截至 2026-05）
+    private let model = "gemini-2.5-flash-native-audio-latest"
 
     var onTextResponse: ((String) -> Void)?
     var onAudioResponse: ((Data) -> Void)?
     var onError: ((Error) -> Void)?
 
-    init(apiKey: String) {
-        self.apiKey = apiKey
+    init(proxyURL: String) {
+        self.proxyURL = proxyURL
         super.init()
     }
 
     func connect() {
-        let urlString = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=\(apiKey)"
-        guard let url = URL(string: urlString) else {
+        // 走 Mac 代理（ws://host:port/api/live），API key 在代理的 .env 里
+        guard let url = URL(string: proxyURL) else {
             onError?(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"]))
             return
         }
@@ -2982,7 +2861,8 @@ class GeminiLiveManager: NSObject {
                     ]
                 ],
                 "generation_config": [
-                    "response_modalities": ["TEXT", "AUDIO"],
+                    // native-audio 模型只支持 AUDIO 输出（无 TEXT）
+                    "response_modalities": ["AUDIO"],
                     "speech_config": [
                         "voice_config": [
                             "prebuilt_voice_config": [
