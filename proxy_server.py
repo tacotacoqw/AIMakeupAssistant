@@ -44,6 +44,10 @@ VOLC_TTS_ACCESS_TOKEN = os.environ.get("VOLC_TTS_ACCESS_TOKEN", "").strip()
 VOLC_TTS_RESOURCE_ID = os.environ.get("VOLC_TTS_RESOURCE_ID", "volc.service_type.10029").strip()
 VOLC_TTS_VOICE = os.environ.get("VOLC_TTS_VOICE", "zh_female_cancan_mars_bigtts").strip()
 
+# DeepSeek (fallback for chat when Gemini limited)
+DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "").strip()
+DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat").strip()
+
 PORT = int(os.environ.get("PORT", "8888"))
 
 # SSL: 关掉验证，避免 Mac 上自签证书问题
@@ -65,13 +69,46 @@ async def handle_chat(request: web.Request) -> web.Response:
     except Exception as e:
         return web.json_response({"error": f"bad json: {e}"}, status=400)
 
+    # 检查请求是否带图片（vision）— 带图必须走 Gemini，DeepSeek 不支持
+    has_image = _request_has_image(body)
+
+    # 1) 先试 Gemini
+    gemini_result = await _try_gemini_chat(body)
+    if gemini_result["ok"]:
+        return gemini_result["response"]
+
+    # 2) Gemini 失败 → 如果是限速/quota 类错且无图，尝试 DeepSeek
+    if not has_image and DEEPSEEK_API_KEY and gemini_result.get("can_fallback"):
+        print(f"⏳ Gemini 失败({gemini_result['status']})，转 DeepSeek")
+        ds_result = await _try_deepseek_chat(body)
+        if ds_result["ok"]:
+            return ds_result["response"]
+        print(f"❌ DeepSeek 也失败: {ds_result.get('error','?')}")
+
+    # 3) 都失败 → 返回 Gemini 的友好错误（DeepSeek 失败时也用 Gemini 的提示）
+    return gemini_result["error_response"]
+
+
+def _request_has_image(body):
+    """检查 Gemini 请求 body 里是否带图片"""
+    try:
+        for c in body.get("contents", []):
+            for p in c.get("parts", []):
+                if isinstance(p, dict) and ("inline_data" in p or "inlineData" in p):
+                    return True
+    except Exception:
+        pass
+    return False
+
+
+async def _try_gemini_chat(body):
+    """尝试 Gemini，带重试"""
     url = (
         f"https://generativelanguage.googleapis.com/v1beta/models/"
         f"{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
     )
-    # 模型偶发返回 503/429/500（过载/限流），透明重试 2 次
     retry_status = {429, 500, 502, 503, 504}
-    backoff = [0, 1.0, 2.5]
+    backoff = [0, 1.5, 5.0]
     last_data, last_status, last_ct = b"", 500, "application/json"
     try:
         async with ClientSession() as session:
@@ -83,24 +120,116 @@ async def handle_chat(request: web.Request) -> web.Response:
                     last_status = resp.status
                     last_ct = resp.headers.get("Content-Type", "application/json")
                     if resp.status not in retry_status:
-                        print(f"🗨️  /api/chat → {resp.status} ({len(last_data)} bytes)"
+                        print(f"🗨️  /api/chat (Gemini) → {resp.status} ({len(last_data)} B)"
                               + (f" [重试 {attempt}]" if attempt else ""))
-                        return web.Response(body=last_data, status=resp.status,
-                                            headers={"Content-Type": last_ct})
-                    # 可重试错误，打 log 后继续
-                    print(f"⏳ Gemini {resp.status}（{len(last_data)}B），attempt {attempt+1}/{len(backoff)}")
-            # 全部重试用完仍失败 — 把 Gemini 错误翻译成人话
-            print(f"❌ /api/chat 重试耗尽 → {last_status}")
+                        return {
+                            "ok": resp.status == 200,
+                            "status": resp.status,
+                            "response": web.Response(body=last_data, status=resp.status,
+                                                     headers={"Content-Type": last_ct}),
+                            "can_fallback": resp.status >= 400,
+                            "error_response": None,
+                        }
+                    print(f"⏳ Gemini {resp.status} attempt {attempt+1}/{len(backoff)}")
+            print(f"⚠️ Gemini 重试耗尽 → {last_status}")
             try:
-                print(f"   错误体: {last_data.decode('utf-8', errors='replace')[:500]}")
+                print(f"   错误体: {last_data.decode('utf-8', errors='replace')[:300]}")
             except Exception:
                 pass
-            import json as _json
             friendly = _translate_gemini_error(last_status, last_data)
-            return web.json_response({"error": friendly}, status=last_status)
+            return {
+                "ok": False,
+                "status": last_status,
+                "response": None,
+                "can_fallback": True,
+                "error_response": web.json_response({"error": friendly}, status=last_status),
+            }
     except Exception as e:
-        print(f"❌ /api/chat 转发异常: {e}")
-        return web.json_response({"error": f"代理服务异常: {e}"}, status=500)
+        print(f"❌ Gemini 异常: {e}")
+        return {
+            "ok": False,
+            "status": 500,
+            "response": None,
+            "can_fallback": True,
+            "error_response": web.json_response({"error": f"代理服务异常: {e}"}, status=500),
+        }
+
+
+async def _try_deepseek_chat(body):
+    """把 Gemini 格式请求转 OpenAI 格式发给 DeepSeek，然后把响应转回 Gemini 格式"""
+    import json as _json
+    # 拼 messages
+    messages = []
+    for c in body.get("contents", []):
+        role = c.get("role", "user")
+        if role == "model":
+            role = "assistant"
+        text_parts = []
+        for p in c.get("parts", []):
+            if isinstance(p, dict) and "text" in p:
+                text_parts.append(p["text"])
+        if text_parts:
+            messages.append({"role": role, "content": "\n".join(text_parts)})
+
+    if not messages:
+        return {"ok": False, "error": "no messages"}
+
+    gen_cfg = body.get("generationConfig", {})
+    ds_body = {
+        "model": DEEPSEEK_MODEL,
+        "messages": messages,
+        "temperature": float(gen_cfg.get("temperature", 0.8)),
+        "max_tokens": int(gen_cfg.get("maxOutputTokens", 2000)),
+    }
+
+    try:
+        async with ClientSession() as session:
+            async with session.post(
+                "https://api.deepseek.com/chat/completions",
+                json=ds_body,
+                headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+                         "Content-Type": "application/json"},
+                ssl=SSL_CTX,
+                timeout=60,
+            ) as resp:
+                data = await resp.read()
+                if resp.status != 200:
+                    print(f"❌ DeepSeek HTTP {resp.status}: {data.decode('utf-8','replace')[:200]}")
+                    return {"ok": False, "error": f"DeepSeek HTTP {resp.status}"}
+
+                ds_json = _json.loads(data)
+                choice = (ds_json.get("choices") or [{}])[0]
+                msg = choice.get("message", {})
+                text = msg.get("content", "")
+                if not text:
+                    return {"ok": False, "error": "DeepSeek 返回空"}
+
+                # 转 Gemini 格式
+                usage = ds_json.get("usage", {})
+                gemini_compat = {
+                    "candidates": [{
+                        "content": {
+                            "parts": [{"text": text}],
+                            "role": "model"
+                        },
+                        "finishReason": "STOP",
+                        "index": 0
+                    }],
+                    "usageMetadata": {
+                        "promptTokenCount": usage.get("prompt_tokens", 0),
+                        "candidatesTokenCount": usage.get("completion_tokens", 0),
+                        "totalTokenCount": usage.get("total_tokens", 0),
+                    },
+                    "modelVersion": f"deepseek-{DEEPSEEK_MODEL}",
+                }
+                print(f"🗨️  /api/chat (DeepSeek) → 200 ({len(text)} chars)")
+                return {
+                    "ok": True,
+                    "response": web.json_response(gemini_compat, status=200),
+                }
+    except Exception as e:
+        print(f"❌ DeepSeek 异常: {e}")
+        return {"ok": False, "error": str(e)}
 
 
 def _translate_gemini_error(status: int, body: bytes) -> str:
@@ -115,11 +244,15 @@ def _translate_gemini_error(status: int, body: bytes) -> str:
         gemini_status, message = "", body.decode("utf-8", errors="replace")[:200]
 
     if status == 429 or gemini_status == "RESOURCE_EXHAUSTED":
-        # 解析 retry-in 秒数
+        # 解析 retry-in 秒数。<60 秒 = 每分钟限速；≥60 秒 = 日限额
         import re
         m = re.search(r"retry in ([\d.]+)s", message, re.I)
-        retry = f"约 {int(float(m.group(1)))} 秒后" if m else "稍后"
-        return f"今天的免费额度用完啦~ 请{retry}再试 (或换个 Gemini 模型)"
+        secs = int(float(m.group(1))) if m else 60
+        if secs < 60:
+            return f"AI 这一会儿有点忙，{secs} 秒后自动好（每分钟限制 15 次的临时上限）"
+        else:
+            mins = secs // 60
+            return f"今天 AI 调用配额用满啦~ {mins} 分钟后再试（或换 Gemini 模型）"
     if status == 403 or gemini_status == "PERMISSION_DENIED":
         return "API key 权限有问题（可能已撤销或未启用 Gemini API）"
     if status == 400:
@@ -381,7 +514,8 @@ def main():
     app.router.add_get("/health", handle_health)
 
     print(f"代理服务器启动: http://0.0.0.0:{PORT}")
-    print(f"  POST /api/chat        → Gemini {GEMINI_MODEL}")
+    fallback = f" → DeepSeek({DEEPSEEK_MODEL}) 自动接管" if DEEPSEEK_API_KEY else " (无 fallback)"
+    print(f"  POST /api/chat        → Gemini {GEMINI_MODEL}{fallback}")
     print(f"  POST /api/tts         → 火山豆包 TTS (voice={VOLC_TTS_VOICE})")
     print(f"  POST /api/tts-gemini  → Gemini TTS {GEMINI_TTS_MODEL} (备用)")
     print(f"  WS   /api/live        → Gemini Live {GEMINI_LIVE_MODEL}")

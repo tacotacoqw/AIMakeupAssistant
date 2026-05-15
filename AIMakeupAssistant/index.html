@@ -20,7 +20,8 @@
             height: 100vh;
             overflow: hidden;
             background: #FEF3C7;
-            font-family: -apple-system, 'PingFang SC', sans-serif;
+            /* Apple Color Emoji 必须放在 PingFang SC 之前，否则中文字体会先尝试渲染 emoji 字形（没有 → 豆腐块） */
+            font-family: -apple-system, 'Apple Color Emoji', 'PingFang SC', sans-serif;
             color: #1C1917;
             margin: 0;
             padding: 0;
@@ -110,13 +111,14 @@
             display: flex;
             align-items: center;
             gap: 5px;
-            padding: 6px 12px;
+            padding: 10px 14px;
+            min-height: 44px;
             background: rgba(249,115,22,0.1);
             border: none;
-            border-radius: 20px;
-            font-size: 13px;
+            border-radius: 22px;
+            font-size: 14px;
             font-weight: 500;
-            color: #EA580C;
+            color: #C2410C; /* 加深一档，对深色背景对比更好 (WCAG AA) */
         }
 
         .location-btn:active {
@@ -159,10 +161,20 @@
         }
 
         .video-placeholder svg {
-            width: 64px;
-            height: 64px;
+            width: 72px;
+            height: 72px;             /* 强制 1:1，跟 viewBox 24×24 一致，绝不会扁 */
             margin-bottom: 16px;
-            opacity: 0.6;
+            opacity: 0.85;
+            display: block;
+        }
+        /* 录制点呼吸效果，告诉用户"在加载中" */
+        .video-placeholder svg .cam-led {
+            animation: camLedPulse 1.4s ease-in-out infinite;
+            transform-origin: 17.5px 9.5px;
+        }
+        @keyframes camLedPulse {
+            0%, 100% { opacity: 0.3; transform: scale(0.85); }
+            50%      { opacity: 1.0; transform: scale(1.15); }
         }
 
         .video-placeholder p {
@@ -304,11 +316,12 @@
 
         .quick-btn {
             flex-shrink: 0;
-            padding: 10px 16px;
+            padding: 12px 18px;
+            min-height: 44px;
             background: white;
             border: 1.5px solid #FED7AA;
-            border-radius: 20px;
-            font-size: 14px;
+            border-radius: 22px;
+            font-size: 15px;
             font-weight: 500;
             color: #1C1917;
             white-space: nowrap;
@@ -467,6 +480,15 @@
             object-fit: cover;
             z-index: 0;
         }
+        /* 通话页人脸检测虚线框层：盖在视频上方、UI 下方 */
+        .call-face-canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
         /* 右上角摄像头切换按钮 */
         .call-camera-switch {
             position: absolute;
@@ -554,13 +576,39 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 42px;
             box-shadow: 0 0 30px rgba(249,115,22,0.3);
+        }
+        .call-avatar svg {
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.18));
         }
 
         @keyframes callBreath {
             0%, 100% { transform: scale(1); opacity: 0.5; }
             50% { transform: scale(1.08); opacity: 1; }
+        }
+
+        /* ===== 通话连接中的加载状态 ===== */
+        .call-center.connecting .call-avatar {
+            opacity: 0.55;
+            transition: opacity 0.3s;
+        }
+        .call-center.connecting .call-avatar-wrap::before {
+            content: '';
+            position: absolute;
+            inset: -22px;
+            border-radius: 50%;
+            border: 3px solid rgba(249,115,22,0.18);
+            border-top-color: #F97316;
+            animation: callSpin 0.9s linear infinite;
+            pointer-events: none;
+        }
+        .call-center.connecting .call-avatar-ring,
+        .call-center.connecting .call-avatar-ring2 {
+            animation-play-state: paused;
+            opacity: 0;
+        }
+        @keyframes callSpin {
+            to { transform: rotate(360deg); }
         }
 
         /* AI名字 */
@@ -803,6 +851,35 @@
         }
 
         .hidden { display: none !important; }
+
+        /* ===== 无障碍 (Accessibility) ===== */
+
+        /* 屏幕阅读器专属文字：视觉隐藏但 VoiceOver 仍能读 */
+        .sr-only {
+            position: absolute !important;
+            width: 1px; height: 1px;
+            padding: 0; margin: -1px;
+            overflow: hidden; clip: rect(0,0,0,0);
+            white-space: nowrap; border: 0;
+        }
+
+        /* 键盘焦点高亮 — 用户用键盘 / 外接设备能看清焦点 */
+        button:focus-visible,
+        select:focus-visible,
+        input:focus-visible,
+        [tabindex]:focus-visible {
+            outline: 3px solid #F97316;
+            outline-offset: 2px;
+        }
+
+        /* 用户系统开启"减弱动画"时关掉非必要动画 */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.001ms !important;
+            }
+        }
 
         /* Store Panel */
         .store-panel {
@@ -1324,20 +1401,20 @@
             align-self: center;
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous" async></script>
 </head>
 <body>
     <div id="app">
         <!-- Header -->
         <header class="header">
             <div class="logo">
-                <div class="logo-icon">
-                    <!-- 口红 + sparkle：美妆主题 -->
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 4l3-1.5 3 1.5v3.5H9V4z"/>
-                        <rect x="8" y="7.5" width="8" height="3" rx="0.6"/>
-                        <rect x="8.7" y="10.5" width="6.6" height="10" rx="1.1"/>
-                        <path d="M18.5 5.5l.5 1.4 1.4.5-1.4.5-.5 1.4-.5-1.4-1.4-.5 1.4-.5z" fill="white" stroke="none"/>
+                <div class="logo-icon" role="img" aria-label="AI 美妆助手">
+                    <!-- 标准口红 SVG (与通话头像统一) -->
+                    <svg width="28" height="28" viewBox="0 0 48 48" focusable="false" aria-hidden="true">
+                        <rect x="14" y="26" width="20" height="16" rx="2.8" fill="white"/>
+                        <rect x="13" y="22" width="22" height="5" rx="1.2" fill="rgba(255,255,255,0.9)"/>
+                        <path d="M16 22 L19 8 L29 6 L32 22 Z" fill="#FECDD3"/>
+                        <ellipse cx="23" cy="11" rx="2.5" ry="1.2" fill="rgba(255,255,255,0.55)"/>
+                        <path d="M38 13 L39 15.5 L41.5 16.5 L39 17.5 L38 20 L37 17.5 L34.5 16.5 L37 15.5 Z" fill="white"/>
                     </svg>
                 </div>
                 <div class="logo-text">
@@ -1346,15 +1423,15 @@
                 </div>
             </div>
             <div class="header-actions">
-                <button class="location-btn" onclick="toggleSettingsPanel()" style="padding:6px 10px;min-width:auto;">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <button class="location-btn" onclick="toggleSettingsPanel()" style="padding:6px 10px;min-width:auto;" aria-label="打开语音设置">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                         <circle cx="12" cy="12" r="3"/>
                     </svg>
                     <span>设置</span>
                 </button>
-                <button id="storeBtn" class="location-btn" onclick="toggleStorePanel()">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <button id="storeBtn" class="location-btn" onclick="toggleStorePanel()" aria-label="查看附近化妆品店">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                     </svg>
@@ -1368,37 +1445,43 @@
             <div class="video-container">
                 <video id="camera" autoplay playsinline muted></video>
                 <canvas id="faceCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;"></canvas>
-                <button id="cameraSwitchBtn" class="camera-switch-btn" onclick="switchCamera()" title="切换摄像头">
-                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <button id="cameraSwitchBtn" class="camera-switch-btn" onclick="switchCamera()" title="切换摄像头" aria-label="切换前后摄像头">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M20.015 4.356v4.992"/>
                     </svg>
                 </button>
-                <div id="placeholder" class="video-placeholder">
-                    <!-- 化妆镜：椭圆镜面 + 支架 + 闪光 -->
-                    <svg fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                        <ellipse cx="12" cy="9" rx="7" ry="6"/>
-                        <ellipse cx="12" cy="9" rx="4.5" ry="3.8" opacity="0.4"/>
-                        <path d="M12 15v4M8.5 21h7M10.5 19h3"/>
-                        <path d="M16.5 5.5l.4 1 1 .4-1 .4-.4 1-.4-1-1-.4 1-.4z" stroke-width="1"/>
+                <div id="placeholder" class="video-placeholder" role="img" aria-label="正在加载摄像头">
+                    <!-- 摄像头图标：取景器 + 机身 + 镜头 + 呼吸录制点 -->
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                        <!-- 顶部取景器（小凸起） -->
+                        <path d="M9 5l1-2h4l1 2"/>
+                        <!-- 机身（圆角矩形）-->
+                        <rect x="3" y="6" width="18" height="14" rx="2.5"/>
+                        <!-- 镜头外圈 -->
+                        <circle cx="12" cy="13" r="4.5"/>
+                        <!-- 镜头内圈（焦距感）-->
+                        <circle cx="12" cy="13" r="2"/>
+                        <!-- 录制指示灯（呼吸闪烁）-->
+                        <circle cx="17.5" cy="9.5" r="0.9" fill="currentColor" stroke="none" class="cam-led"/>
                     </svg>
-                    <p>请用真机测试摄像头</p>
-                    <small>模拟器无法显示真实画面</small>
+                    <p>正在加载摄像头...</p>
+                    <small>请确保已授权摄像头权限</small>
                 </div>
                 <div class="video-status">
-                    <span id="aiStatus">准备就绪</span>
+                    <span id="aiStatus" aria-live="polite" aria-atomic="true">准备就绪</span>
                 </div>
             </div>
         </section>
 
         <!-- Chat -->
-        <section class="chat-section">
-            <div id="chat" class="chat-messages">
+        <section class="chat-section" aria-label="对话记录">
+            <div id="chat" class="chat-messages" role="log" aria-live="polite" aria-relevant="additions" aria-label="与小美的对话">
                 <div class="message msg-ai">
                     你好！我是小美，你的 AI 美妆助手~ 我可以帮你分析肤质、推荐妆容、教你化妆，还能帮你找附近的化妆品店哦！通过摄像头还能拍照分析你的皮肤~
                 </div>
             </div>
 
-            <div class="quick-actions">
+            <div class="quick-actions" role="group" aria-label="快捷提问">
                 <button class="quick-btn" data-text="分析我的皮肤状态">分析皮肤</button>
                 <button class="quick-btn" data-text="教我画日常妆">日常妆教程</button>
                 <button class="quick-btn" data-text="推荐适合我的口红颜色">推荐口红</button>
@@ -1408,34 +1491,35 @@
         </section>
 
         <!-- Controls -->
-        <section class="controls">
+        <section class="controls" aria-label="输入区">
             <div class="input-row">
-                <input id="input" type="text" class="text-input" placeholder="输入消息...">
-                <button id="sendBtn" class="send-btn">
+                <label for="input" class="sr-only">输入消息</label>
+                <input id="input" type="text" class="text-input" placeholder="输入消息..." aria-label="输入你的问题">
+                <button id="sendBtn" class="send-btn" aria-label="发送消息">
                     <!-- 实心纸飞机：机翼 + 折叠阴影分两层 -->
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
                         <path d="M2.4 11.1 20.6 3.2c.9-.4 1.8.5 1.4 1.4l-7.9 18.2c-.4 1-1.8 1-2.2 0L9 16.4c-.1-.3-.3-.5-.6-.6L2.4 13.3c-1-.4-1-1.8 0-2.2z"/>
                         <path d="M9 16.4 22 4.6" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.4" stroke-linecap="round"/>
                     </svg>
                 </button>
             </div>
             <div class="action-row">
-                <button id="voiceBtn" class="action-btn primary">
+                <button id="voiceBtn" class="action-btn primary" aria-label="开始语音通话" aria-pressed="false">
                     <span id="voiceIcon">
-                        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
                         </svg>
                     </span>
-                    <span id="voiceWave" class="voice-waves hidden">
+                    <span id="voiceWave" class="voice-waves hidden" aria-hidden="true">
                         <span></span><span></span><span></span><span></span><span></span>
                     </span>
                     <span>语音通话</span>
                 </button>
-                <button id="speakerBtn" class="action-btn secondary">
-                    <svg id="spkOn" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <button id="speakerBtn" class="action-btn secondary" aria-label="语音播报已开启" aria-pressed="true">
+                    <svg id="spkOn" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
                     </svg>
-                    <svg id="spkOff" class="hidden" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <svg id="spkOff" class="hidden" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
                     </svg>
                     <span>语音播报</span>
@@ -1451,7 +1535,7 @@
     <div id="storePanel" class="store-panel">
         <div class="store-panel-header">
             <h2>附近化妆品店</h2>
-            <button class="store-panel-close" onclick="toggleStorePanel()">&times;</button>
+            <button class="store-panel-close" onclick="toggleStorePanel()" aria-label="关闭面板">&times;</button>
         </div>
         <div id="storePanelBody" class="store-panel-body">
             <div class="loading-location">正在获取位置信息...</div>
@@ -1465,7 +1549,7 @@
     <div id="settingsPanel" class="settings-panel">
         <div class="settings-panel-header">
             <h2>语音设置</h2>
-            <button class="store-panel-close" onclick="toggleSettingsPanel()">&times;</button>
+            <button class="store-panel-close" onclick="toggleSettingsPanel()" aria-label="关闭设置">&times;</button>
         </div>
         <div class="settings-panel-body">
             <div class="setting-group">
@@ -1490,35 +1574,50 @@
     </div>
 
     <!-- Call Overlay -->
-    <div id="callOverlay" class="call-overlay">
-        <video id="callVideoBg" class="call-video-bg" autoplay playsinline muted></video>
-        <div id="callTaskContainer" class="call-task-container"></div>
+    <div id="callOverlay" class="call-overlay" role="dialog" aria-modal="true" aria-label="语音通话界面">
+        <video id="callVideoBg" class="call-video-bg" autoplay playsinline muted aria-hidden="true"></video>
+        <canvas id="callFaceCanvas" class="call-face-canvas" aria-hidden="true"></canvas>
+        <div id="callTaskContainer" class="call-task-container" aria-live="polite"></div>
         <div class="call-center">
-            <div class="call-avatar-wrap">
+            <div class="call-avatar-wrap" aria-hidden="true">
                 <div class="call-avatar-ring"></div>
                 <div class="call-avatar-ring2"></div>
-                <div class="call-avatar">&#128132;</div>
+                <div class="call-avatar" role="img" aria-label="小美">
+                    <!-- 粉色唇膏头 + 白管身 SVG，比 emoji 渲染更稳定 -->
+                    <svg width="58" height="58" viewBox="0 0 48 48" focusable="false" aria-hidden="true">
+                        <!-- 管身（粗、矮、白） -->
+                        <rect x="14" y="26" width="20" height="16" rx="2.8" fill="white"/>
+                        <!-- 管帽（中间装饰条） -->
+                        <rect x="13" y="22" width="22" height="5" rx="1.2" fill="rgba(255,255,255,0.9)"/>
+                        <!-- 唇膏头（粉红色斜切顶部） -->
+                        <path d="M16 22 L19 8 L29 6 L32 22 Z" fill="#FECDD3"/>
+                        <!-- 头部高光 -->
+                        <ellipse cx="23" cy="11" rx="2.5" ry="1.2" fill="rgba(255,255,255,0.55)"/>
+                        <!-- 右上小 sparkle -->
+                        <path d="M38 13 L39 15.5 L41.5 16.5 L39 17.5 L38 20 L37 17.5 L34.5 16.5 L37 15.5 Z" fill="white"/>
+                    </svg>
+                </div>
             </div>
             <div class="call-name">小美</div>
-            <div class="call-status" id="callStatus">正在连接...</div>
-            <div class="call-voice-bars" id="callVoiceBars">
+            <div class="call-status" id="callStatus" aria-live="polite" aria-atomic="true">正在连接...</div>
+            <div class="call-voice-bars" id="callVoiceBars" aria-hidden="true">
                 <span></span><span></span><span></span><span></span><span></span>
                 <span></span><span></span><span></span><span></span>
             </div>
         </div>
-        <div class="call-subtitle-area" id="callSubtitleArea"></div>
+        <div class="call-subtitle-area" id="callSubtitleArea" aria-live="polite" aria-atomic="true"></div>
         <div class="call-bottom">
-            <button class="call-action-btn call-mute" id="callMuteBtn" onclick="toggleCallMute()">
+            <button class="call-action-btn call-mute" id="callMuteBtn" onclick="toggleCallMute()" aria-label="静音麦克风" aria-pressed="false">
                 <div class="btn-circle">
                     <!-- 麦克风开（默认）：胶囊头 + 弧形支架 + 底座 -->
-                    <svg class="icon-on" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg class="icon-on" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
                         <rect x="9" y="3" width="6" height="11" rx="3"/>
                         <path d="M5 11a7 7 0 0 0 14 0"/>
                         <line x1="12" y1="18" x2="12" y2="22"/>
                         <line x1="8" y1="22" x2="16" y2="22"/>
                     </svg>
                     <!-- 麦克风关（静音）：同样形状 + 一道斜杠 -->
-                    <svg class="icon-off" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg class="icon-off" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
                         <path d="M9 9V6a3 3 0 0 1 6 0v3"/>
                         <path d="M15 12v2a3 3 0 0 1-3 3 3 3 0 0 1-2.85-2.04"/>
                         <path d="M5 11a7 7 0 0 0 12.55 4.27"/>
@@ -1529,25 +1628,25 @@
                 </div>
                 <span class="btn-label">静音</span>
             </button>
-            <button class="call-action-btn call-hangup" onclick="toggleCallMode()">
+            <button class="call-action-btn call-hangup" onclick="toggleCallMode()" aria-label="挂断通话">
                 <div class="btn-circle">
                     <!-- 挂断：标准 call_end 形状，直接画好不需 transform，永远在 viewBox 内 -->
-                    <svg width="30" height="30" viewBox="0 0 24 24" fill="white">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="white" aria-hidden="true" focusable="false">
                         <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.88 1.12-2.66 1.86-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.965.965 0 0 1-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28-.78-.74-1.68-1.36-2.66-1.86a1.01 1.01 0 0 1-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/>
                     </svg>
                 </div>
                 <span class="btn-label">挂断</span>
             </button>
-            <button class="call-action-btn call-speaker" id="callSpeakerBtn" onclick="toggleCallSpeaker()">
+            <button class="call-action-btn call-speaker" id="callSpeakerBtn" onclick="toggleCallSpeaker()" aria-label="切换免提" aria-pressed="true">
                 <div class="btn-circle">
                     <!-- 免提（默认）：实心喇叭 + 两道音波 -->
-                    <svg class="icon-on" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg class="icon-on" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
                         <path d="M11 5L6 9H3v6h3l5 4V5z" fill="white" stroke="none"/>
                         <path d="M15.5 8.5a5 5 0 0 1 0 7"/>
                         <path d="M18.5 5.5a9 9 0 0 1 0 13"/>
                     </svg>
                     <!-- 听筒：喇叭 + X -->
-                    <svg class="icon-off" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg class="icon-off" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
                         <path d="M11 5L6 9H3v6h3l5 4V5z" fill="white" stroke="none"/>
                         <line x1="16" y1="9" x2="22" y2="15"/>
                         <line x1="22" y1="9" x2="16" y2="15"/>
@@ -1618,12 +1717,6 @@
                 if (callMode) syncCallVideo();
                 // 摄像头就绪后初始化人脸网格检测
                 initFaceMesh();
-                // 自动启动 Gemini Live 实时分析
-                setTimeout(() => {
-                    if (visionEnabled) {
-                        startGeminiLive();
-                    }
-                }, 1000);
             } catch (e) {
                 if (retries < 3) {
                     // 重试，每次间隔递增
@@ -2045,11 +2138,15 @@
             if (callMuted) {
                 btn.classList.add('muted');
                 btn.querySelector('.btn-label').textContent = '取消静音';
+                btn.setAttribute('aria-pressed', 'true');
+                btn.setAttribute('aria-label', '取消静音');
                 stopCallModeRecognition();
                 updateCallOverlayStatus('已静音');
             } else {
                 btn.classList.remove('muted');
                 btn.querySelector('.btn-label').textContent = '静音';
+                btn.setAttribute('aria-pressed', 'false');
+                btn.setAttribute('aria-label', '静音麦克风');
                 if (callMode && !processing && !speaking) {
                     startCallModeRecognition();
                 }
@@ -2067,6 +2164,117 @@
             // CSS .earpiece 状态控制图标切换
             btn.classList.toggle('earpiece', !voiceEnabled);
             btn.querySelector('.btn-label').textContent = voiceEnabled ? '免提' : '听筒';
+            btn.setAttribute('aria-pressed', voiceEnabled ? 'true' : 'false');
+            btn.setAttribute('aria-label', voiceEnabled ? '已开启免提，点击切到听筒' : '已切换到听筒，点击开启免提');
+            // 同步主控制区的"语音播报"按钮 ARIA
+            const mainSpk = $('speakerBtn');
+            if (mainSpk) {
+                mainSpk.setAttribute('aria-pressed', voiceEnabled ? 'true' : 'false');
+                mainSpk.setAttribute('aria-label', voiceEnabled ? '语音播报已开启' : '语音播报已关闭');
+            }
+        }
+
+        // ===== 通话 Earcon（声音提示）— iOS WKWebView 必须 user-gesture 内解锁 =====
+        let _audioCtx = null;
+        let _audioUnlocked = false;
+
+        function _ensureAudioCtx() {
+            if (!_audioCtx) {
+                const AC = window.AudioContext || window.webkitAudioContext;
+                if (!AC) return null;
+                _audioCtx = new AC();
+            }
+            return _audioCtx;
+        }
+
+        // iOS 解锁：在任何 user gesture 里塞一次"空音"，AudioContext 之后就能自由播放
+        function _unlockAudioOnce() {
+            if (_audioUnlocked) return;
+            const ctx = _ensureAudioCtx();
+            if (!ctx) return;
+            try {
+                if (ctx.state === 'suspended') ctx.resume();
+                const buf = ctx.createBuffer(1, 1, 22050);
+                const src = ctx.createBufferSource();
+                src.buffer = buf;
+                src.connect(ctx.destination);
+                src.start(0);
+                _audioUnlocked = true;
+                console.log('[Earcon] AudioContext 已解锁');
+            } catch (e) {
+                console.warn('[Earcon] 解锁失败:', e);
+            }
+        }
+        // 任何用户首次触摸都触发解锁（一次性）
+        document.addEventListener('touchstart', _unlockAudioOnce, { once: true, passive: true });
+        document.addEventListener('click', _unlockAudioOnce, { once: true });
+
+        function _playTone(freq, durationMs, startOffsetMs, volume) {
+            try {
+                const ctx = _ensureAudioCtx();
+                if (!ctx) { console.warn('[Earcon] 无 AudioContext'); return; }
+                if (ctx.state === 'suspended') ctx.resume();
+                const start = ctx.currentTime + (startOffsetMs || 0) / 1000;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, start);
+                osc.connect(gain).connect(ctx.destination);
+                const v = volume == null ? 0.35 : volume; // 提高默认音量
+                gain.gain.setValueAtTime(0.0001, start);
+                gain.gain.exponentialRampToValueAtTime(v, start + 0.012);
+                gain.gain.setValueAtTime(v, start + durationMs / 1000 - 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, start + durationMs / 1000);
+                osc.start(start);
+                osc.stop(start + durationMs / 1000 + 0.05);
+            } catch (e) { console.warn('[Earcon] 播放失败:', e); }
+        }
+        // 优先调用原生 iOS earcon (AudioServicesPlaySystemSound)，绕开 Web Audio 限制；
+        // 不可用时回退到 Web Audio 自合成的 tone。
+        function _nativeEarcon(type) {
+            try {
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeEarcon) {
+                    window.webkit.messageHandlers.nativeEarcon.postMessage(type);
+                    return true;
+                }
+            } catch (e) {}
+            return false;
+        }
+        function earconConnecting() { if (!_nativeEarcon('connecting')) _playTone(520, 180, 0); }
+        function earconConnected()  { if (!_nativeEarcon('connected'))  { _playTone(660, 110, 0); _playTone(880, 170, 130); } }
+        function earconHangup()     { if (!_nativeEarcon('hangup'))     { _playTone(660, 100, 0); _playTone(440, 200, 110); } }
+
+        // ===== 通话连接状态：极简版 — 加载圈固定 1 秒后必清，没有任何条件 =====
+        let _callConnectingTimer = null;
+        let _callIsConnecting = false;
+
+        function _clearConnectingClass() {
+            // 找到 call-center 并强制移除 .connecting；无论何时调用都安全
+            document.querySelectorAll('.call-center').forEach(el => el.classList.remove('connecting'));
+            _callIsConnecting = false;
+            if (_callConnectingTimer) { clearTimeout(_callConnectingTimer); _callConnectingTimer = null; }
+            console.log('[通话] 加载圈已清');
+        }
+
+        function setCallConnecting(on) {
+            if (on) {
+                document.querySelectorAll('.call-center').forEach(el => el.classList.add('connecting'));
+                _callIsConnecting = true;
+                console.log('[通话] 加载圈开');
+                // 硬兜底：1.2 秒后无论如何都清，再无任何条件判断
+                if (_callConnectingTimer) clearTimeout(_callConnectingTimer);
+                _callConnectingTimer = setTimeout(_clearConnectingClass, 1200);
+            } else {
+                _clearConnectingClass();
+            }
+        }
+
+        function markCallConnected() {
+            // 接通：清加载 + 双声 earcon + 更新状态文字
+            const wasConnecting = _callIsConnecting;
+            _clearConnectingClass();
+            if (wasConnecting) earconConnected();
+            updateCallOverlayStatus('正在听你说...');
         }
 
         // 进入/退出通话模式
@@ -2074,6 +2282,7 @@
             console.log('[通话] toggleCallMode 被调用，当前 callMode:', callMode);
             if (callMode) {
                 // 退出通话模式
+                earconHangup(); // 挂断音：下行两声
                 callMode = false;
                 callMuted = false;
                 stopCallModeRecognition();
@@ -2081,11 +2290,11 @@
                 stopCallTimer();
                 stopCallVoiceBars();
                 clearCallSubtitles();
-                // 停止 Gemini Live
-                stopGeminiLiveForCall();
                 // 隐藏通话界面
                 console.log('[通话] 隐藏通话界面');
                 $('callOverlay').classList.remove('active');
+                // 清掉加载态（万一是连接中被挂）
+                setCallConnecting(false);
                 // 停止通话背景视频
                 const cv = $('callVideoBg');
                 if (cv) { cv.srcObject = null; }
@@ -2095,10 +2304,14 @@
                 $('voiceBtn').classList.remove('listening');
                 $('voiceBtn').classList.remove('call-mode');
                 $('voiceBtn').querySelector('span:last-child').textContent = '语音通话';
+                $('voiceBtn').setAttribute('aria-pressed', 'false');
+                $('voiceBtn').setAttribute('aria-label', '开始语音通话');
                 $('aiStatus').textContent = '准备就绪';
                 // 恢复静音按钮
                 $('callMuteBtn').classList.remove('muted');
                 $('callMuteBtn').querySelector('.btn-label').textContent = '静音';
+                $('callMuteBtn').setAttribute('aria-pressed', 'false');
+                $('callMuteBtn').setAttribute('aria-label', '静音麦克风');
             } else {
                 // 进入通话模式
                 console.log('[通话] 进入通话模式');
@@ -2109,7 +2322,14 @@
                 console.log('[通话] callOverlay 元素:', overlay);
                 overlay.classList.add('active');
                 console.log('[通话] 已添加 active 类，classList:', overlay.classList.toString());
-                updateCallOverlayStatus('正在连接...');
+                // 先预热 audio session，让后续 TTS 首次播放更稳
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.prewarmAudio) {
+                    window.webkit.messageHandlers.prewarmAudio.postMessage({});
+                }
+                // 进入加载状态：旋转环 + 头像变暗 + 单声 earcon
+                setCallConnecting(true);
+                earconConnecting();
+                updateCallOverlayStatus('正在连接小美...');
                 clearCallSubtitles();
                 syncCallVideo();
                 startCallTimer();
@@ -2117,22 +2337,35 @@
                 // 底部按钮也更新
                 $('voiceBtn').classList.add('call-mode');
                 $('voiceBtn').querySelector('span:last-child').textContent = '挂断';
+                $('voiceBtn').setAttribute('aria-pressed', 'true');
+                $('voiceBtn').setAttribute('aria-label', '挂断通话');
 
-                // 启动 Gemini Live 实时语音对话
-                startGeminiLiveForCall();
-
-                // 等待连接建立后开始识别
+                // 短暂"准备中"后接通 + 语音问候，等问候说完才开 STT 避免回声
                 setTimeout(() => {
-                    updateCallOverlayStatus('正在听你说...');
-                    showCallSubtitle('我在呢，你说~', 'ai');
-                    // 使用 Gemini Live 发送欢迎消息
-                    sendTextToGeminiLive('你好');
+                    if (!callMode) return;
+                    console.log('[通话] markCallConnected → 准备播放问候');
+                    markCallConnected();
+
+                    const greeting = '小美准备好啦，可以开始啦';
+                    showCallSubtitle(greeting, 'ai');
+
+                    // 给 earcon 1 秒缓冲，避免 earcon 的 AudioServicesPlaySystemSound 还在占用 audio session
                     setTimeout(() => {
-                        if (callMode && !listening) {
+                        if (!callMode) return;
+                        console.log('[通话] 触发 speak(greeting)');
+                        _callGreetingPending = true;
+                        speak(greeting);
+                    }, 800);
+
+                    // 兜底：万一 TTS 出问题没回调，4.5 秒后强制启 STT
+                    setTimeout(() => {
+                        if (callMode && _callGreetingPending && !listening) {
+                            console.log('[通话] 兜底：TTS 没回调，强制启 STT');
+                            _callGreetingPending = false;
                             startCallModeRecognition();
                         }
-                    }, 500);
-                }, 1000);
+                    }, 4500);
+                }, 500);
             }
         }
 
@@ -2250,9 +2483,10 @@
             }
             _streamTTSActive = true;
             speaking = true;
-            // 快速播报第一句，减少等待时间
+            // 首句立即播报，减少等待时间（短句也允许，不再等到攒满 30 字）
             let combinedText = _streamSentenceQueue.shift();
-            while (_streamSentenceQueue.length > 0 && combinedText.length < 30) {
+            // 只在已有多句缓存时才略微合并，避免单句太短到 TTS 报错
+            while (_streamSentenceQueue.length > 0 && combinedText.length < 12) {
                 combinedText += _streamSentenceQueue.shift();
             }
             if (callMode) {
@@ -2738,7 +2972,17 @@
             }
         };
 
+        let _callGreetingPending = false;
         window.nativeTTSEnded = function() {
+            // 通话开场问候 TTS 结束 → 立刻启 STT，让用户能马上说话
+            if (_callGreetingPending && callMode) {
+                _callGreetingPending = false;
+                setTimeout(() => {
+                    if (callMode && !listening) startCallModeRecognition();
+                }, 100); // 100ms 让 audio session 完全释放
+                return;
+            }
+
             // 逐句播报模式：播完一句，继续下一句（不停止音量监听，保持打断检测）
             if (_streamSentenceQueue.length > 0) {
                 _speakNextStream();
@@ -2796,8 +3040,6 @@
             if (!callMode) return;
             // 停止TTS（Swift已停止，JS侧同步状态）
             stopSpeak();
-            // 中断 Gemini Live 音频流
-            interruptGeminiLive();
             if (callMode) {
                 showCallSubtitle('', 'user'); // 清除字幕
                 updateCallOverlayStatus('正在听你说...');
@@ -2949,10 +3191,17 @@
                 $('chat').scrollTop = $('chat').scrollHeight;
             }
 
-            // 同步任务卡片到通话界面
+            // 同步任务卡片到通话界面（全部完成则清空，不再占屏）
             const callTaskCont = $('callTaskContainer');
             if (callTaskCont) {
-                callTaskCont.innerHTML = '<div class="task-card">' + html + '</div>';
+                if (allDone) {
+                    // 全部完成 — 通话页直接消失，不残留
+                    callTaskCont.innerHTML = '';
+                    callTaskCont.classList.remove('has-task');
+                } else {
+                    callTaskCont.innerHTML = '<div class="task-card">' + html + '</div>';
+                    callTaskCont.classList.add('has-task');
+                }
             }
         }
 
@@ -3286,8 +3535,136 @@
                 detectWithFaceMesh(landmarks);
             }
 
+            // 实时"画偏"检测（任何时候都跑，不需要任务上下文）
+            detectLipOutOfBounds(landmarks);
+
             fmPrevLandmarks = landmarks;
         };
+
+        // ===== 实时检测口红是否画到唇线外 =====
+        let _lipWarnCooldown = 0;       // 上次提醒时间，限流 8 秒一次
+        let _lipHintTimer = null;       // 红圈视觉提示自动清除定时器
+
+        function detectLipOutOfBounds(landmarks) {
+            const native = landmarks._native;
+            if (!native || !native.lipOutline || native.lipOutline.length < 6) return;
+            const video = $('camera');
+            if (!video || video.readyState < 2) return;
+
+            // 视频帧取色
+            const tc = document.createElement('canvas');
+            tc.width = video.videoWidth || 640;
+            tc.height = video.videoHeight || 480;
+            const tctx = tc.getContext('2d');
+            tctx.drawImage(video, 0, 0, tc.width, tc.height);
+            const imgData = tctx.getImageData(0, 0, tc.width, tc.height);
+
+            const outline = native.lipOutline;
+            // 唇形多边形中心 — 用于决定"向外"的方向
+            let cx = 0, cy = 0;
+            for (const p of outline) { cx += p.x; cy += p.y; }
+            cx /= outline.length; cy /= outline.length;
+
+            // 在每个轮廓点的"外侧"采样（沿背离中心方向偏移 1.2%）
+            const hits = [];  // 检测到的"画到外面"的位置
+            for (let i = 0; i < outline.length; i++) {
+                const p = outline[i];
+                const dx = p.x - cx;
+                const dy = p.y - cy;
+                const len = Math.sqrt(dx*dx + dy*dy);
+                if (len < 0.001) continue;
+                const off = 0.012;
+                const sx = p.x + (dx / len) * off;
+                const sy = p.y + (dy / len) * off;
+                const px = Math.round(sx * tc.width);
+                const py = Math.round(sy * tc.height);
+                if (px < 1 || px >= tc.width - 1 || py < 1 || py >= tc.height - 1) continue;
+
+                // 3×3 平均
+                let r = 0, g = 0, b = 0, cnt = 0;
+                for (let dy2 = -1; dy2 <= 1; dy2++) {
+                    for (let dx2 = -1; dx2 <= 1; dx2++) {
+                        const idx = ((py + dy2) * tc.width + (px + dx2)) * 4;
+                        r += imgData.data[idx];
+                        g += imgData.data[idx + 1];
+                        b += imgData.data[idx + 2];
+                        cnt++;
+                    }
+                }
+                r /= cnt; g /= cnt; b /= cnt;
+
+                // 红色度：红色明显高于绿蓝
+                const redness = r - (g + b) / 2;
+                // 偏红 + 亮度足够 = 可能是涂到了外面的口红色
+                if (redness > 28 && r > 130) {
+                    hits.push({ p, px, py });
+                }
+            }
+
+            // 至少 3 个"外侧"点检测到口红色 → 算画偏了
+            if (hits.length < 3) return;
+
+            const now = Date.now();
+            if (now - _lipWarnCooldown < 8000) {
+                // 还在限流期，只更新视觉提示，不再 TTS
+                drawLipOutOfBoundsHint(hits);
+                return;
+            }
+            _lipWarnCooldown = now;
+
+            // 判断偏到了哪个方向
+            const avgX = hits.reduce((s, h) => s + h.p.x, 0) / hits.length;
+            const avgY = hits.reduce((s, h) => s + h.p.y, 0) / hits.length;
+            const lipCenterX = cx, lipCenterY = cy;
+            let where = '';
+            if (avgX < lipCenterX - 0.01) where = '左边';
+            else if (avgX > lipCenterX + 0.01) where = '右边';
+            if (avgY < lipCenterY - 0.01) where = (where ? where + '上方' : '上唇');
+            else if (avgY > lipCenterY + 0.01) where = (where ? where + '下方' : '下唇');
+            if (!where) where = '唇线';
+
+            console.log('[画偏检测] hits:', hits.length, 'where:', where);
+
+            // 视觉 + 语音双通道反馈
+            drawLipOutOfBoundsHint(hits);
+            const msg = `诶，${where}好像画到嘴唇外面了一点点哦~`;
+            if (typeof speak === 'function') speak(msg);
+            showCallSubtitle && callMode && showCallSubtitle(msg, 'ai');
+        }
+
+        function drawLipOutOfBoundsHint(hits) {
+            // 在主 canvas 和通话 canvas 上画红色虚线小圈，2 秒后自动清
+            const canvases = [];
+            if (fmCanvas) canvases.push(fmCanvas);
+            if (callMode) {
+                const cc = $('callFaceCanvas');
+                if (cc) canvases.push(cc);
+            }
+            for (const cv of canvases) {
+                const ctx = cv.getContext('2d');
+                const w = cv.width, h = cv.height;
+                ctx.save();
+                ctx.strokeStyle = 'rgba(220, 38, 38, 0.92)';
+                ctx.fillStyle = 'rgba(220, 38, 38, 0.15)';
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([4, 3]);
+                for (const hit of hits) {
+                    const px = hit.p.x * w;
+                    const py = hit.p.y * h;
+                    ctx.beginPath();
+                    ctx.arc(px, py, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                }
+                ctx.setLineDash([]);
+                ctx.restore();
+            }
+            // 2 秒后自动清（让正常 detection 接管）
+            if (_lipHintTimer) clearTimeout(_lipHintTimer);
+            _lipHintTimer = setTimeout(() => {
+                // detectionRegion 会在下一帧自己 clear 重画，所以这里不主动 clear
+            }, 2000);
+        }
 
         // =====================================================
         // 人脸网格检测（MediaPipe Face Mesh，参考 test8.html）
@@ -3712,6 +4089,131 @@
             } else if (hasMovement) {
                 fmCompletionCount = Math.max(0, fmCompletionCount - 1);
             }
+
+            // 🔍 画偏检测（只在口红任务时跑）
+            const taskType = getTaskDetectionType(currentTasks[activeStep].name);
+            if (taskType === 'lip') {
+                const detection = detectLipOutOfBounds(landmarks);
+                _maybeWarnLipOutOfBounds(detection);
+            }
+        }
+
+        // ===== 画偏检测：判断"颜色超出唇线" =====
+
+        let _lipOffWarningHistory = [];
+        let _lipOffLastWarnAt = 0;
+        const LIP_OFF_THROTTLE_MS = 8000;     // 8 秒内最多一次 TTS 提示
+        const LIP_OFF_OUTLINE_OFFSET = 0.008; // 唇线外偏移量（归一化坐标，相对图像）
+        const LIP_OFF_MIN_HITS = 2;            // 平均出界点数 ≥ 2 才警告
+
+        function detectLipOutOfBounds(landmarks) {
+            const outline = landmarks._native && landmarks._native.lipOutline;
+            if (!outline || outline.length < 6) return null;
+            if (!fmInitialLipColor) return null;
+
+            const video = $('camera');
+            if (!video || video.readyState < 2) return null;
+
+            const tc = document.createElement('canvas');
+            tc.width = video.videoWidth || 640;
+            tc.height = video.videoHeight || 480;
+            const tctx = tc.getContext('2d');
+            tctx.drawImage(video, 0, 0, tc.width, tc.height);
+            const imgData = tctx.getImageData(0, 0, tc.width, tc.height).data;
+
+            // 唇形中心
+            let cx = 0, cy = 0;
+            for (const p of outline) { cx += p.x; cy += p.y; }
+            cx /= outline.length; cy /= outline.length;
+
+            const detected = [];
+            const initSat = fmInitialLipColor.saturation;
+
+            for (const p of outline) {
+                // 从唇中心 → 这个轮廓点的方向，再外推 LIP_OFF_OUTLINE_OFFSET
+                const dx = p.x - cx;
+                const dy = p.y - cy;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                if (len < 0.001) continue;
+                const outerX = p.x + (dx / len) * LIP_OFF_OUTLINE_OFFSET;
+                const outerY = p.y + (dy / len) * LIP_OFF_OUTLINE_OFFSET;
+
+                const px = Math.floor(outerX * tc.width);
+                const py = Math.floor(outerY * tc.height);
+                if (px < 1 || py < 1 || px >= tc.width - 1 || py >= tc.height - 1) continue;
+
+                // 3x3 邻域取均色，减少单像素噪声
+                let sr = 0, sg = 0, sb = 0, cnt = 0;
+                for (let dy2 = -1; dy2 <= 1; dy2++) {
+                    for (let dx2 = -1; dx2 <= 1; dx2++) {
+                        const idx = ((py + dy2) * tc.width + (px + dx2)) * 4;
+                        sr += imgData[idx]; sg += imgData[idx + 1]; sb += imgData[idx + 2];
+                        cnt++;
+                    }
+                }
+                const r = sr / cnt, g = sg / cnt, b = sb / cnt;
+                const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+                const sat = mx === 0 ? 0 : (mx - mn) / mx;
+
+                // 判断：饱和度比基线高显著 + 红色主导 = "口红颜色越界了"
+                const isLipstickLike = (sat > initSat + 0.15) && (r > g + 8) && (r > b);
+                if (isLipstickLike) detected.push({ x: outerX, y: outerY });
+            }
+
+            return { hits: detected.length, total: outline.length, detected: detected };
+        }
+
+        function _maybeWarnLipOutOfBounds(detection) {
+            if (!detection) return;
+
+            _lipOffWarningHistory.push(detection.hits);
+            if (_lipOffWarningHistory.length > 5) _lipOffWarningHistory.shift();
+
+            // 在两个 canvas 上画红色出界圈（即时反馈，不节流）
+            _drawLipOffMarkers(detection);
+
+            // TTS 节流：最近 5 帧平均 ≥ MIN_HITS 且距上次 ≥ 8s 才说话
+            const avg = _lipOffWarningHistory.reduce((a, b) => a + b, 0) / _lipOffWarningHistory.length;
+            if (avg < LIP_OFF_MIN_HITS) return;
+
+            const now = Date.now();
+            if (now - _lipOffLastWarnAt < LIP_OFF_THROTTLE_MS) return;
+            _lipOffLastWarnAt = now;
+
+            const msgs = [
+                '诶~好像画到嘴唇外面一点点啦',
+                '哎呀，有点画偏了哦',
+                '嘴唇线那边稍微出去了一些',
+                '小心点，画到唇线外面了',
+                '哎，颜色超出唇线了',
+            ];
+            const msg = msgs[Math.floor(Math.random() * msgs.length)];
+            if (typeof speak === 'function') speak(msg);
+        }
+
+        function _drawLipOffMarkers(detection) {
+            if (!detection || detection.detected.length === 0) return;
+            const canvases = [fmCanvas];
+            if (callMode) {
+                const cc = $('callFaceCanvas');
+                if (cc) canvases.push(cc);
+            }
+            for (const canvas of canvases) {
+                if (!canvas) continue;
+                const ctx = canvas.getContext('2d');
+                ctx.save();
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.95)'; // 红
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([4, 3]);
+                for (const p of detection.detected) {
+                    const x = p.x * canvas.width;
+                    const y = p.y * canvas.height;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 7, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
         }
 
         function resetFmForNextStep() {
@@ -3798,15 +4300,10 @@
             addMessage(text, true);
             history.push({ role: 'user', content: text });
 
-            // 通话模式下使用 Gemini Live
-            if (callMode && geminiLiveForCall) {
+            // 通话模式走 /api/chat + 流式 TTS
+            if (callMode) {
                 $('aiStatus').textContent = '小美思考中...';
                 updateCallOverlayStatus('小美思考中...');
-                // 通过 Gemini Live 发送文字，语音回复会通过 nativeGeminiLiveAudio 回调返回
-                sendTextToGeminiLive(text);
-                // 不要立即设置 processing = false，等待 AI 回复后再重置
-                // processing 会在 nativeGeminiLiveResponse 中重置
-                return;
             }
 
             // 普通模式使用 HTTP API
@@ -3982,136 +4479,6 @@
             }
         }, 1000);
 
-        // =====================================================
-        // Gemini Live 实时语音对话（通话模式）
-        // =====================================================
-        let geminiLiveEnabled = false;
-        let geminiLiveForCall = false; // 是否用于通话模式
-        let geminiLiveTimer = null;
-        let geminiLiveProcessing = false;
-        let geminiLiveLastAnalysis = '';
-        const GEMINI_LIVE_FPS = 1; // 每秒发送1帧
-
-        function startGeminiLiveForCall() {
-            geminiLiveEnabled = true;
-            geminiLiveForCall = true;
-            $('aiStatus').textContent = 'Gemini Live 通话中...';
-
-            // 通知 Swift 启动 Gemini Live WebSocket
-            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.startGeminiLive) {
-                window.webkit.messageHandlers.startGeminiLive.postMessage({});
-            }
-        }
-
-        function stopGeminiLiveForCall() {
-            geminiLiveEnabled = false;
-            geminiLiveForCall = false;
-            $('aiStatus').textContent = '准备就绪';
-
-            // 通知 Swift 停止 Gemini Live
-            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.stopGeminiLive) {
-                window.webkit.messageHandlers.stopGeminiLive.postMessage({});
-            }
-        }
-
-        function sendTextToGeminiLive(text) {
-            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.sendGeminiLiveText) {
-                window.webkit.messageHandlers.sendGeminiLiveText.postMessage({ text: text });
-            }
-        }
-
-        function startGeminiLive() {
-            if (geminiLiveTimer || !visionEnabled) return;
-
-            geminiLiveEnabled = true;
-            $('aiStatus').textContent = 'AI 实时分析中...';
-
-            // 通知 Swift 启动 Gemini Live WebSocket
-            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.startGeminiLive) {
-                window.webkit.messageHandlers.startGeminiLive.postMessage({});
-            }
-
-            // 定时发送视频帧到 Gemini Live
-            geminiLiveTimer = setInterval(() => {
-                if (geminiLiveProcessing || !stream) return;
-
-                const frame = captureFrame(true); // 640x480 高清
-                if (!frame) return;
-
-                geminiLiveProcessing = true;
-                sendFrameToGeminiLive(frame);
-            }, 1000 / GEMINI_LIVE_FPS);
-        }
-
-        function stopGeminiLive() {
-            if (geminiLiveTimer) {
-                clearInterval(geminiLiveTimer);
-                geminiLiveTimer = null;
-            }
-            geminiLiveEnabled = false;
-            geminiLiveProcessing = false;
-            $('aiStatus').textContent = '准备就绪';
-
-            // 通知 Swift 停止 Gemini Live
-            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.stopGeminiLive) {
-                window.webkit.messageHandlers.stopGeminiLive.postMessage({});
-            }
-        }
-
-        function sendFrameToGeminiLive(base64Image) {
-            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.sendGeminiLiveImage) {
-                window.webkit.messageHandlers.sendGeminiLiveImage.postMessage({
-                    image: base64Image,
-                    text: '用5个字以内描述当前画面中的人脸状态'
-                });
-            }
-            // 快速重置处理标志，因为 WebSocket 是异步的
-            setTimeout(() => {
-                geminiLiveProcessing = false;
-            }, 100);
-        }
-
-        // Swift 回调：接收 Gemini Live 响应
-        window.nativeGeminiLiveResponse = function(text) {
-            // 通话模式：显示文字回复
-            if (geminiLiveForCall && text) {
-                addMessage(text);
-                showCallSubtitle(text, 'ai');
-                history.push({ role: 'assistant', content: text });
-                processing = false; // 重置 processing 状态
-                $('aiStatus').textContent = '正在听你说...';
-                updateCallOverlayStatus('正在听你说...');
-                // 确保识别在运行
-                if (!listening && !speaking) {
-                    setTimeout(() => {
-                        if (callMode && !listening && !processing && !speaking) {
-                            startCallModeRecognition();
-                        }
-                    }, 500);
-                }
-            } else if (text && text !== geminiLiveLastAnalysis) {
-                // 视频分析模式
-                geminiLiveLastAnalysis = text;
-                $('aiStatus').textContent = text.substring(0, 20) + (text.length > 20 ? '...' : '');
-            }
-        };
-
-        // Gemini Live 音频回复（原生语音）
-        window.nativeGeminiLiveAudio = function(audioData) {
-            // 通话模式：播放原生音频
-            if (geminiLiveForCall) {
-                // 音频会由 Swift 的 TTSManager 自动播放
-                speaking = true;
-                // 播放完成后会调用 nativeTTSEnded
-            }
-        };
-
-        // 中断 Gemini Live（用户打断时调用）
-        function interruptGeminiLive() {
-            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.interruptGeminiLive) {
-                window.webkit.messageHandlers.interruptGeminiLive.postMessage({});
-            }
-        }
     </script>
 </body>
 </html>
