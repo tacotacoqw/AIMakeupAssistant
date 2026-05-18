@@ -3494,6 +3494,10 @@
         // Swift 回调：接收原生人脸特征点
         window.nativeFaceLandmarks = function(data) {
             nativeFaceProcessing = false;
+
+            // 视障辅助：摄像头空间引导（即使 data=null 没人脸也要触发提示）
+            maybeSpeakFaceGuidance(data);
+
             if (!data) return;
             // 至少需要嘴唇数据或脸框数据
             if (!data.lipTop && !data.faceBox) return;
@@ -4097,6 +4101,95 @@
                 _maybeWarnLipOutOfBounds(detection);
             }
         }
+
+        // ===== 视障辅助：摄像头空间引导 =====
+        // 检测人脸位置/距离，用语音引导盲人对准摄像头
+        const FACE_GUIDE_THROTTLE_MS    = 5000;   // 同一种提示 5 秒内不重复
+        const FACE_GUIDE_NO_FACE_WAIT   = 2000;   // 没人脸防抖：2 秒后才报
+        const FACE_GUIDE_REPEAT_MS      = 9000;   // 同一状态超过 9 秒再念一次
+
+        let _faceGuideEnabled = true;             // 总开关（以后可在设置里关）
+        let _faceGuideLastState = null;
+        let _faceGuideLastSpokenAt = 0;
+        let _faceGuideNoFaceSince = null;
+
+        // 评估当前人脸位置 → 返回 {state, msg}
+        function _evaluateFacePosition(data) {
+            if (!data || !data.faceBox) {
+                return { state: 'no_face', msg: '没看到你的脸，请把手机对准面前' };
+            }
+            const fb = data.faceBox;
+            const cx = fb.x + fb.w / 2;
+            const cy = fb.y + fb.h / 2;
+
+            // 距离判断（按脸宽占比，前置摄像头一般 0.35-0.55 算正常）
+            if (fb.w < 0.22) return { state: 'too_far',   msg: '把手机往脸近一点，再近一点' };
+            if (fb.w > 0.75) return { state: 'too_close', msg: '手机离脸远一点点' };
+
+            // 中心位置（容差 ±15%）
+            if (cx < 0.30) return { state: 'too_left',  msg: '脸往右移一些，或者手机往左挪一点' };
+            if (cx > 0.70) return { state: 'too_right', msg: '脸往左移一些，或者手机往右挪一点' };
+            if (cy < 0.25) return { state: 'too_high',  msg: '手机往上抬一点点' };
+            if (cy > 0.75) return { state: 'too_low',   msg: '手机往下降一点点' };
+
+            return { state: 'good', msg: '位置好了，可以开始啦' };
+        }
+
+        function maybeSpeakFaceGuidance(data) {
+            if (!_faceGuideEnabled) return;
+            // 只在有化妆任务（化妆指导场景）时引导；纯聊天不强求脸正对
+            if (!currentTasks || currentTasks.length === 0) return;
+            // 涂抹完一步后等下一步还是要引导，但已经全部完成就别再说话
+            if (currentTasks.every(t => t.done)) return;
+
+            const ev = _evaluateFacePosition(data);
+            const now = Date.now();
+
+            // 没人脸防抖：第一次出现给 2 秒缓冲
+            if (ev.state === 'no_face') {
+                if (!_faceGuideNoFaceSince) _faceGuideNoFaceSince = now;
+                if (now - _faceGuideNoFaceSince < FACE_GUIDE_NO_FACE_WAIT) return;
+            } else {
+                _faceGuideNoFaceSince = null;
+            }
+
+            // 状态变好 → 念一句"好了"
+            if (ev.state === 'good') {
+                if (_faceGuideLastState && _faceGuideLastState !== 'good') {
+                    if (now - _faceGuideLastSpokenAt > 1500) {
+                        if (typeof speak === 'function') speak(ev.msg);
+                        _faceGuideLastSpokenAt = now;
+                    }
+                }
+                _faceGuideLastState = 'good';
+                return;
+            }
+
+            // 状态变化（坏状态切换） → 立刻说
+            if (ev.state !== _faceGuideLastState) {
+                if (now - _faceGuideLastSpokenAt < FACE_GUIDE_THROTTLE_MS) return;
+                _faceGuideLastState = ev.state;
+                _faceGuideLastSpokenAt = now;
+                if (typeof speak === 'function') speak(ev.msg);
+                _showFaceGuideText(ev.msg, ev.state);
+                return;
+            }
+
+            // 状态持续过久 → 隔 9 秒重念一次
+            if (now - _faceGuideLastSpokenAt > FACE_GUIDE_REPEAT_MS) {
+                _faceGuideLastSpokenAt = now;
+                if (typeof speak === 'function') speak(ev.msg);
+            }
+        }
+
+        // 状态文字也显示在状态条上（低视力用户能看见）
+        function _showFaceGuideText(msg, state) {
+            const el = $('aiStatus');
+            if (!el) return;
+            el.textContent = msg;
+            if (callMode) updateCallOverlayStatus(msg);
+        }
+
 
         // ===== 画偏检测：判断"颜色超出唇线" =====
 
